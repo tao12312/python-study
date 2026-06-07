@@ -1,0 +1,321 @@
+{
+  "session_info": {
+    "mode": "learning",
+    "date_time": "20260607_185252",
+    "total_questions": 11,
+    "score": "2/11",
+    "score_percentage": 18
+  },
+  "quiz_set": [
+    {
+      "id": 1,
+      "type": "objective",
+      "question": "파이썬에서 리스트(List)를 선언할 때 사용하는 괄호 기호는 무엇인가요?",
+      "options": [
+        "( ) 소괄호",
+        "{ } 중괄호",
+        "[ ] 대괄호",
+        "< > 꺾쇠괄호",
+        "괄호를 사용하지 않음"
+      ],
+      "key": 3,
+      "wrong_feedbacks": [
+        "소괄호 ( )는 수정 불가능한 자료형인 튜플(Tuple)을 선언할 때 사용합니다.",
+        "중괄호 { }는 딕셔너리(Dictionary)나 집합(Set)을 선언할 때 사용합니다.",
+        "꺾쇠괄호 < >는 파이썬에서 비교 연산자로 사용되며, 자료형 선언 기호가 아닙니다.",
+        "리스트는 대괄호 [ ] 기호를 사용하여 선언해야 합니다."
+      ],
+      "hint": "리스트는 인덱스로 접근할 수 있는 순서가 있는 모음입니다."
+    },
+    {
+      "id": 2,
+      "type": "objective",
+      "question": "다음 중 파이썬의 튜플(Tuple) 자료형에 대한 설명으로 옳은 것은?",
+      "options": [
+        "튜플은 중괄호 { }를 이용하여 선언한다.",
+        "튜플은 값을 생성한 후 요소를 변경(수정/삭제)할 수 없다.",
+        "튜플은 중복된 값을 저장할 수 없다.",
+        "튜플은 키(Key)와 값(Value)의 쌍으로 저장된다.",
+        "튜플은 순서가 없는 자료형이다."
+      ],
+      "key": 2,
+      "wrong_feedbacks": [
+        "튜플은 소괄호 ( )를 사용하여 선언합니다.",
+        "튜플은 리스트와 마찬가지로 중복된 값을 가질 수 있습니다.",
+        "키와 값의 쌍으로 저장되는 것은 딕셔너리(Dictionary)입니다.",
+        "튜플은 인덱스를 가지는 순서가 있는 자료형입니다."
+      ],
+      "hint": "튜플은 읽기 전용 리스트와 유사한 성격을 가집니다."
+    },
+    {
+      "id": 3,
+      "type": "objective",
+      "question": "파이썬 딕셔너리(Dictionary) 자료형의 특징으로 올바르지 않은 것은?",
+      "options": [
+        "중괄호 { }를 사용하여 선언한다.",
+        "키(Key)와 값(Value)의 쌍으로 데이터를 다룬다.",
+        "동일한 키(Key)를 중복해서 가질 수 있다.",
+        "딕셔너리의 키는 변경 불가능한 자료형(예: 문자열, 튜플)이어야 한다.",
+        "값(Value)은 중복되어도 상관없다."
+      ],
+      "key": 3,
+      "wrong_feedbacks": [
+        "딕셔너리는 중괄호 { }를 사용해 선언하는 것이 맞습니다.",
+        "키와 값의 쌍으로 저장하는 구조가 맞습니다.",
+        "딕셔너리는 변경 불가능한 고유의 키를 가집니다.",
+        "값(Value)은 고유할 필요가 없어서 중복 저장이 가능합니다."
+      ],
+      "hint": "딕셔너리에서 키는 각 요소를 구분하는 고유한 값이어야 합니다."
+    },
+    {
+      "id": 4,
+      "type": "objective",
+      "question": "다음 자료형 중 불리언(Boolean) 타입에 속하는 값은 무엇인가요?",
+      "options": [
+        "\"True\"",
+        "True",
+        "1.0",
+        "[True]",
+        "none"
+      ],
+      "key": 2,
+      "wrong_feedbacks": [
+        "\"True\"는 따옴표로 감싸져 있어 문자열(str) 자료형입니다.",
+        "1.0은 소수점이 포함된 실수(float) 자료형입니다.",
+        "[True]는 불리언 값을 요소로 갖는 리스트(List) 자료형입니다.",
+        "파이썬에서 값이 없음을 나타내는 키워드는 대문자로 시작하는 None입니다."
+      ],
+      "hint": "따옴표로 감싸면 문자열이 되며, 대소문자 구분이 중요합니다."
+    },
+    {
+      "id": 5,
+      "type": "objective",
+      "question": "파이썬의 if 조건문에서 여러 개의 조건을 순차적으로 비교하기 위해 사용하는 키워드는?",
+      "options": [
+        "else if",
+        "elseif",
+        "elif",
+        "switch",
+        "otherwise"
+      ],
+      "key": 3,
+      "wrong_feedbacks": [
+        "else if는 C/Java 등의 언어에서 사용하며 파이썬에서는 문법 에러가 발생합니다.",
+        "elseif는 PHP 등에서 쓰이며 파이썬 표준 키워드가 아닙니다.",
+        "switch-case는 파이썬에서 제공하지 않는 문법 구조입니다.",
+        "otherwise는 파이썬 예약어(Keyword)가 아닙니다."
+      ],
+      "hint": "else와 if의 합성어 형태를 짧게 줄인 키워드입니다."
+    },
+    {
+      "id": 6,
+      "type": "objective",
+      "question": "for i in range(1, 6) 루프에서 변수 i가 가질 수 있는 값의 범위로 올바른 것은?",
+      "options": [
+        "1, 2, 3, 4, 5, 6",
+        "1, 2, 3, 4, 5",
+        "0, 1, 2, 3, 4, 5",
+        "2, 3, 4, 5, 6",
+        "1, 3, 5"
+      ],
+      "key": 2,
+      "wrong_feedbacks": [
+        "끝값(stop)으로 지정된 6은 범위 내에 포함되지 않습니다.",
+        "시작값이 1이므로 0은 포함되지 않습니다.",
+        "시작값은 1이므로 2부터 시작하지 않고 1부터 시작합니다.",
+        "기본 간격이 1이므로 홀수만 생성하는 것이 아닌 연속적인 정수를 생성합니다."
+      ],
+      "hint": "range(start, stop)은 start부터 stop-1까지의 숫자를 생성합니다."
+    },
+    {
+      "id": 7,
+      "type": "objective",
+      "question": "반복문(for, while) 내부에서 실행 도중 루프를 완전히 빠져나가기 위해 사용하는 키워드는?",
+      "options": [
+        "continue",
+        "pass",
+        "exit",
+        "break",
+        "stop"
+      ],
+      "key": 4,
+      "wrong_feedbacks": [
+        "continue는 남은 코드를 실행하지 않고 다음 루프 회차로 넘어갈 때 사용합니다.",
+        "pass는 아무 작업도 수행하지 않고 자리만 채울 때 사용하는 키워드입니다.",
+        "exit()는 프로그램을 완전히 종료시키는 함수입니다.",
+        "stop은 파이썬 예약어가 아닙니다."
+      ],
+      "hint": "탈출(Breakout)을 의미하는 영어 단어입니다."
+    },
+    {
+      "id": 8,
+      "type": "objective",
+      "question": "반복문 내에서 특정 조건일 때 현재 회차의 남은 코드를 건너뛰고 다음 반복을 진행하게 만드는 키워드는?",
+      "options": [
+        "continue",
+        "pass",
+        "next",
+        "break",
+        "skip"
+      ],
+      "key": 1,
+      "wrong_feedbacks": [
+        "pass는 문법상 문장이 필요하지만 아무 일도 하지 않고 지나쳐야 할 때 씁니다.",
+        "next는 파이썬 반복자(Iterator)의 다음 요소를 가져올 때 쓰는 내장 함수입니다.",
+        "break는 반복문을 완전히 끝내고 루프 밖으로 나갈 때 사용합니다.",
+        "skip은 파이썬 예약어가 아닙니다."
+      ],
+      "hint": "계속해서 다음 단계를 수행하라는 의미를 갖습니다."
+    },
+    {
+      "id": 9,
+      "type": "objective",
+      "question": "파이썬에서 사용자 정의 함수를 정의하기 위해 사용하는 키워드는 무엇인가요?",
+      "options": [
+        "function",
+        "func",
+        "define",
+        "def",
+        "method"
+      ],
+      "key": 4,
+      "wrong_feedbacks": [
+        "function 키워드는 JavaScript 등에서 사용하며 파이썬 키워드가 아닙니다.",
+        "func는 Go, Swift 등에서 사용되는 키워드입니다.",
+        "define은 C/C++ 전처리기 등에서 쓰이며 파이썬 문법이 아닙니다.",
+        "method는 객체의 함수를 지칭하는 명칭일 뿐 정의용 예약어가 아닙니다."
+      ],
+      "hint": "definition의 약자에서 유래된 3글자 키워드입니다."
+    },
+    {
+      "id": 10,
+      "type": "objective",
+      "question": "파이썬 클래스에서 인스턴스가 생성될 때 속성을 초기화하기 위해 호출되는 생성자 메서드의 이름은?",
+      "options": [
+        "__construct__",
+        "__init__",
+        "__create__",
+        "Dog()",
+        "__new__"
+      ],
+      "key": 2,
+      "wrong_feedbacks": [
+        "__construct__는 PHP 등에서 사용되는 생성자 명칭입니다.",
+        "__create__는 파이썬 표준 내장 생성자 메서드가 아닙니다.",
+        "Dog()와 같이 클래스명 형태는 객체를 생성할 때 사용하지만 내부 함수명이 아닙니다.",
+        "__new__는 인스턴스를 실제로 생성하는 로우레벨 메서드로, 초기화를 맡는 일반 생성자는 __init__입니다."
+      ],
+      "hint": "initialize를 축약하여 앞뒤로 언더바(_) 2개씩 붙인 형태입니다."
+    },
+    {
+      "id": 11,
+      "type": "objective",
+      "question": "클래스 내부에 선언된 인스턴스 메서드가 첫 번째 매개변수로 항상 전달받아야 하는 자기 자신 객체의 참조 키워드는?",
+      "options": [
+        "this",
+        "self",
+        "me",
+        "my",
+        "object"
+      ],
+      "key": 2,
+      "wrong_feedbacks": [
+        "this는 Java/C++/JS 등에서 객체 자신을 나타낼 때 사용하며 파이썬에서는 사용되지 않습니다.",
+        "me는 VB 등 일부 언어에서 사용하나 파이썬 규격이 아닙니다.",
+        "my는 파이썬에서 제공하지 않는 예약어입니다.",
+        "object는 파이썬 모든 클래스의 기본 최상위 클래스 이름입니다."
+      ],
+      "hint": "자기 자신을 뜻하는 영어 단어입니다."
+    }
+  ],
+  "user_results": [
+    {
+      "id": 1,
+      "type": "objective",
+      "user_input": 3,
+      "is_correct": true,
+      "stdout": "",
+      "applied_feedback": "정답"
+    },
+    {
+      "id": 2,
+      "type": "objective",
+      "user_input": 4,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "키와 값의 쌍으로 저장되는 것은 딕셔너리(Dictionary)입니다."
+    },
+    {
+      "id": 3,
+      "type": "objective",
+      "user_input": 4,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "딕셔너리는 변경 불가능한 고유의 키를 가집니다."
+    },
+    {
+      "id": 4,
+      "type": "objective",
+      "user_input": 4,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "[True]는 불리언 값을 요소로 갖는 리스트(List) 자료형입니다."
+    },
+    {
+      "id": 5,
+      "type": "objective",
+      "user_input": 4,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "switch-case는 파이썬에서 제공하지 않는 문법 구조입니다."
+    },
+    {
+      "id": 6,
+      "type": "objective",
+      "user_input": 4,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "시작값은 1이므로 2부터 시작하지 않고 1부터 시작합니다."
+    },
+    {
+      "id": 7,
+      "type": "objective",
+      "user_input": 4,
+      "is_correct": true,
+      "stdout": "",
+      "applied_feedback": "정답"
+    },
+    {
+      "id": 8,
+      "type": "objective",
+      "user_input": 4,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "break는 반복문을 완전히 끝내고 루프 밖으로 나갈 때 사용합니다."
+    },
+    {
+      "id": 9,
+      "type": "objective",
+      "user_input": 5,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "method는 객체의 함수를 지칭하는 명칭일 뿐 정의용 예약어가 아닙니다."
+    },
+    {
+      "id": 10,
+      "type": "objective",
+      "user_input": 4,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "Dog()와 같이 클래스명 형태는 객체를 생성할 때 사용하지만 내부 함수명이 아닙니다."
+    },
+    {
+      "id": 11,
+      "type": "objective",
+      "user_input": 4,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "my는 파이썬에서 제공하지 않는 예약어입니다."
+    }
+  ]
+}

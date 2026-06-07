@@ -1,0 +1,183 @@
+{
+  "session_info": {
+    "mode": "learning",
+    "date_time": "20260607_183938",
+    "total_questions": 10,
+    "score": "9/10",
+    "score_percentage": 90
+  },
+  "quiz_set": [
+    {
+      "id": 12,
+      "type": "subjective",
+      "question": "화면에 'Hello Python'을 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "print() 함수를 사용하세요."
+    },
+    {
+      "id": 13,
+      "type": "subjective",
+      "question": "a 변수에 10을 대입하고, b 변수에 20을 대입한 후, 두 변수의 합(a + b)을 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "a = 10, b = 20 과 print(a + b) 를 사용하세요."
+    },
+    {
+      "id": 14,
+      "type": "subjective",
+      "question": "리스트 values = [10, 20, 30]의 두 번째 요소(20)를 꺼내어 화면에 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "파이썬의 리스트 인덱스는 0부터 시작합니다."
+    },
+    {
+      "id": 15,
+      "type": "subjective",
+      "question": "변수 score가 85일 때, score가 80 이상이면 'Pass', 그렇지 않으면 'Fail'을 출력하는 조건문(if-else) 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "score = 85 아래에 if score >= 80: 블록을 만드세요."
+    },
+    {
+      "id": 16,
+      "type": "subjective",
+      "question": "for문을 사용하여 1부터 5까지의 숫자를 각각 한 줄씩 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "range(1, 6)을 활용해보세요."
+    },
+    {
+      "id": 17,
+      "type": "subjective",
+      "question": "while문을 활용하여 1부터 3까지 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "변수 i = 1로 시작해서 조건문 i <= 3을 걸고 i를 1씩 증가시키세요."
+    },
+    {
+      "id": 18,
+      "type": "subjective",
+      "question": "리스트 [1, 2, 3, 4, 5]가 주어졌을 때, 짝수만 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "값 % 2 == 0 조건문을 활용해 보세요."
+    },
+    {
+      "id": 19,
+      "type": "subjective",
+      "question": "두 정수를 입력받아 그 곱을 반환하는 함수 multiply(a, b)를 정의하고, multiply(5, 6)의 결과를 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "def multiply(a, b): 구현 후 print(multiply(5, 6))을 호출합니다."
+    },
+    {
+      "id": 20,
+      "type": "subjective",
+      "question": "문자열을 입력받아 뒤집어서 반환하는 함수 reverse_string(s)를 정의하고, reverse_string('hello')의 결과를 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "슬라이싱 s[::-1]을 사용하면 문자열을 뒤집을 수 있습니다."
+    },
+    {
+      "id": 21,
+      "type": "subjective",
+      "question": "클래스 Person을 정의하고, 이름(name)을 입력받아 속성으로 설정하는 생성자(__init__)를 만드세요. 그 후 name이 'Gildong'인 객체를 생성하고 name 속성을 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "class Person: 내부에 def __init__(self, name):을 만드세요."
+    }
+  ],
+  "user_results": [
+    {
+      "id": 12,
+      "type": "subjective",
+      "user_input": "# 여기에 코드를 입력하세요\nprint(\"a\")",
+      "is_correct": true,
+      "stdout": "a",
+      "applied_feedback": "정답입니다. 코드 실행 결과가 정상적으로 도출되었으며 문법 오류가 없습니다."
+    },
+    {
+      "id": 13,
+      "type": "subjective",
+      "user_input": "print(\"a\")",
+      "is_correct": true,
+      "stdout": "a",
+      "applied_feedback": "정답입니다. 코드 실행 결과가 정상적으로 도출되었으며 문법 오류가 없습니다."
+    },
+    {
+      "id": 14,
+      "type": "subjective",
+      "user_input": "# 여기에 코드를 입력하세요asd",
+      "is_correct": true,
+      "stdout": "",
+      "applied_feedback": "정답입니다. 코드 실행 결과가 정상적으로 도출되었으며 문법 오류가 없습니다."
+    },
+    {
+      "id": 15,
+      "type": "subjective",
+      "user_input": "123d",
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "문법 오류 또는 런타임 에러가 발생했습니다. 에러 로그를 확인하고 수정해보세요."
+    },
+    {
+      "id": 16,
+      "type": "subjective",
+      "user_input": "# 여기에 코드를 입력하세요123",
+      "is_correct": true,
+      "stdout": "",
+      "applied_feedback": "정답입니다. 코드 실행 결과가 정상적으로 도출되었으며 문법 오류가 없습니다."
+    },
+    {
+      "id": 17,
+      "type": "subjective",
+      "user_input": "# 여기에 코드를 입력하세요\n1",
+      "is_correct": true,
+      "stdout": "",
+      "applied_feedback": "정답입니다. 코드 실행 결과가 정상적으로 도출되었으며 문법 오류가 없습니다."
+    },
+    {
+      "id": 18,
+      "type": "subjective",
+      "user_input": "# 여기에 코드를 입력하세요\n1",
+      "is_correct": true,
+      "stdout": "",
+      "applied_feedback": "정답입니다. 코드 실행 결과가 정상적으로 도출되었으며 문법 오류가 없습니다."
+    },
+    {
+      "id": 19,
+      "type": "subjective",
+      "user_input": "# 여기에 코드를 입력하세요\n1",
+      "is_correct": true,
+      "stdout": "",
+      "applied_feedback": "정답입니다. 코드 실행 결과가 정상적으로 도출되었으며 문법 오류가 없습니다."
+    },
+    {
+      "id": 20,
+      "type": "subjective",
+      "user_input": "# 여기에 코드를 입력하세요\n1",
+      "is_correct": true,
+      "stdout": "",
+      "applied_feedback": "정답입니다. 코드 실행 결과가 정상적으로 도출되었으며 문법 오류가 없습니다."
+    },
+    {
+      "id": 21,
+      "type": "subjective",
+      "user_input": "# 여기에 코드를 입력하세요\n1",
+      "is_correct": true,
+      "stdout": "",
+      "applied_feedback": "정답입니다. 코드 실행 결과가 정상적으로 도출되었으며 문법 오류가 없습니다."
+    }
+  ]
+}

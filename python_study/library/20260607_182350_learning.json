@@ -1,0 +1,24 @@
+{
+  "session_info": {
+    "mode": "learning",
+    "date_time": "20260607_182350",
+    "total_questions": 2,
+    "score": "2/2"
+  },
+  "user_results": [
+    {
+      "quiz_id": 1,
+      "type": "objective",
+      "user_answer": "3",
+      "is_correct": true,
+      "applied_feedback": "정답"
+    },
+    {
+      "quiz_id": 2,
+      "type": "subjective",
+      "user_code": "print(\"Hello Python\")",
+      "is_correct": true,
+      "applied_feedback": "실행 성공"
+    }
+  ]
+}
