@@ -6,6 +6,7 @@ import datetime
 import subprocess
 import sys
 import random
+import tempfile
 
 # ==========================================
 # 1. 환경 설정 및 상수 정의
@@ -675,14 +676,15 @@ class PythonTutorApp(tk.Tk):
                     messagebox.showwarning("경고", "코드를 입력하세요.")
                     return
                 
-                temp_file = "temp_exec.py"
+                temp_file = None
                 stdout_str = ""
                 is_correct = False
                 ai_feedback = ""
                 run_success = False
                 try:
-                    with open(temp_file, "w", encoding="utf-8") as f:
+                    with tempfile.NamedTemporaryFile("w", suffix=".py", encoding="utf-8", delete=False) as f:
                         f.write(user_code)
+                        temp_file = f.name
                     
                     # 2초 타임아웃
                     result = subprocess.run([sys.executable, temp_file], capture_output=True, text=True, timeout=2.0)
@@ -722,7 +724,7 @@ class PythonTutorApp(tk.Tk):
                     console_lbl.config(text=f"▶ 시스템 에러: {e}", fg="#f56565")
                     ai_feedback = f"에러가 발생했습니다: {e}"
                 finally:
-                    if os.path.exists(temp_file):
+                    if temp_file and os.path.exists(temp_file):
                         try:
                             os.remove(temp_file)
                         except:
@@ -1011,10 +1013,11 @@ class PythonTutorApp(tk.Tk):
                 user_input = user_code
                 if user_code:
                     # 로컬 컴파일/실행
-                    temp_file = f"temp_test_{idx}.py"
+                    temp_file = None
                     try:
-                        with open(temp_file, "w", encoding="utf-8") as f:
+                        with tempfile.NamedTemporaryFile("w", suffix=".py", encoding="utf-8", delete=False) as f:
                             f.write(user_code)
+                            temp_file = f.name
                         # 2초 제한
                         res = subprocess.run([sys.executable, temp_file], capture_output=True, text=True, timeout=2.0)
                         stdout = res.stdout.strip()
@@ -1031,7 +1034,7 @@ class PythonTutorApp(tk.Tk):
                         is_correct = False
                         applied_feedback = f"시스템 에러: {e}"
                     finally:
-                        if os.path.exists(temp_file):
+                        if temp_file and os.path.exists(temp_file):
                             try:
                                 os.remove(temp_file)
                             except:
