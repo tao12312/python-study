@@ -1,0 +1,148 @@
+{
+  "session_info": {
+    "mode": "concept",
+    "date_time": "20260607_225014",
+    "total_questions": 5,
+    "score": "1/5",
+    "score_percentage": 20
+  },
+  "quiz_set": [
+    {
+      "id": 1,
+      "type": "objective",
+      "question": "파이썬에서 변수를 선언할 때 타입을 미리 명시하지 않고 값에 따라 타입이 결정되는 방식을 무엇이라 하는가?",
+      "options": [
+        "정적 타이핑",
+        "동적 타이핑",
+        "명시적 타이핑",
+        "강력한 타이핑",
+        "순차적 타이핑"
+      ],
+      "key": 2,
+      "wrong_feedbacks": [
+        "변수 선언 시 타입을 미리 정하는 방식입니다.",
+        "파이썬은 타입을 명시하지 않습니다.",
+        "타입의 강제성과는 다른 개념입니다.",
+        "변수의 선언 순서와는 무관합니다."
+      ],
+      "hint": "값에 따라 타입이 자동으로 결정된다는 점을 떠올려보세요.",
+      "evaluation_criteria": ""
+    },
+    {
+      "id": 2,
+      "type": "objective",
+      "question": "다음 중 순서가 있고 수정 가능한 데이터 모음인 자료형은 무엇인가?",
+      "options": [
+        "튜플",
+        "집합",
+        "딕셔너리",
+        "리스트",
+        "정수형"
+      ],
+      "key": 4,
+      "wrong_feedbacks": [
+        "튜플은 수정이 불가능합니다.",
+        "집합은 순서가 없습니다.",
+        "딕셔너리는 키와 값의 쌍으로 이루어져 있습니다.",
+        "정수형은 기본 자료형입니다."
+      ],
+      "hint": "대괄호 [ ]를 사용하여 선언하는 자료형입니다.",
+      "evaluation_criteria": ""
+    },
+    {
+      "id": 3,
+      "type": "objective",
+      "question": "참(True)과 거짓(False)만을 가지는 논리 자료형은 무엇인가?",
+      "options": [
+        "int",
+        "float",
+        "str",
+        "list",
+        "bool"
+      ],
+      "key": 5,
+      "wrong_feedbacks": [
+        "정수형을 의미합니다.",
+        "실수형을 의미합니다.",
+        "문자열을 의미합니다.",
+        "리스트는 복합 자료형입니다."
+      ],
+      "hint": "불리언(Boolean)을 줄여 부르는 이름입니다.",
+      "evaluation_criteria": ""
+    },
+    {
+      "id": 4,
+      "type": "objective",
+      "question": "순서가 없고 중복을 허용하지 않는 데이터 모음 자료형은 무엇인가?",
+      "options": [
+        "리스트",
+        "튜플",
+        "집합",
+        "딕셔너리",
+        "문자열"
+      ],
+      "key": 3,
+      "wrong_feedbacks": [
+        "리스트는 순서가 있습니다.",
+        "튜플은 순서가 있습니다.",
+        "딕셔너리는 키와 값의 쌍입니다.",
+        "문자열은 텍스트 데이터입니다."
+      ],
+      "hint": "중괄호 { }를 사용하며 수학의 집합 개념과 유사합니다.",
+      "evaluation_criteria": ""
+    },
+    {
+      "id": 5,
+      "type": "objective",
+      "question": "다음 중 수정이 불가능한 데이터 모음인 자료형은 무엇인가?",
+      "options": [
+        "리스트",
+        "딕셔너리",
+        "집합",
+        "튜플",
+        "변수"
+      ],
+      "key": 4,
+      "wrong_feedbacks": [
+        "리스트는 수정이 가능합니다.",
+        "딕셔너리는 수정이 가능합니다.",
+        "집합은 수정이 가능합니다.",
+        "변수는 자료형이 아닌 데이터를 저장하는 공간입니다."
+      ],
+      "hint": "소괄호 ( )를 사용하여 선언합니다.",
+      "evaluation_criteria": ""
+    }
+  ],
+  "user_results": [
+    {
+      "type": "objective",
+      "is_correct": false,
+      "applied_feedback": "변수 선언 시 타입을 미리 정하는 방식입니다.",
+      "user_answer": 1
+    },
+    {
+      "type": "objective",
+      "is_correct": true,
+      "applied_feedback": "정답",
+      "user_answer": 4
+    },
+    {
+      "type": "objective",
+      "is_correct": false,
+      "applied_feedback": "정수형을 의미합니다.",
+      "user_answer": 1
+    },
+    {
+      "type": "objective",
+      "is_correct": false,
+      "applied_feedback": "튜플은 순서가 있습니다.",
+      "user_answer": 2
+    },
+    {
+      "type": "objective",
+      "is_correct": false,
+      "applied_feedback": "집합은 수정이 가능합니다.",
+      "user_answer": 3
+    }
+  ]
+}

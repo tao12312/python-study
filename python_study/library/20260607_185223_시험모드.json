@@ -1,0 +1,238 @@
+{
+  "session_info": {
+    "mode": "test",
+    "date_time": "20260607_185223",
+    "total_questions": 10,
+    "score": "0/10",
+    "score_percentage": 0
+  },
+  "quiz_set": [
+    {
+      "id": 8,
+      "type": "objective",
+      "question": "반복문 내에서 특정 조건일 때 현재 회차의 남은 코드를 건너뛰고 다음 반복을 진행하게 만드는 키워드는?",
+      "options": [
+        "continue",
+        "pass",
+        "next",
+        "break",
+        "skip"
+      ],
+      "key": 1,
+      "wrong_feedbacks": [
+        "pass는 문법상 문장이 필요하지만 아무 일도 하지 않고 지나쳐야 할 때 씁니다.",
+        "next는 파이썬 반복자(Iterator)의 다음 요소를 가져올 때 쓰는 내장 함수입니다.",
+        "break는 반복문을 완전히 끝내고 루프 밖으로 나갈 때 사용합니다.",
+        "skip은 파이썬 예약어가 아닙니다."
+      ],
+      "hint": "계속해서 다음 단계를 수행하라는 의미를 갖습니다."
+    },
+    {
+      "id": 2,
+      "type": "objective",
+      "question": "다음 중 파이썬의 튜플(Tuple) 자료형에 대한 설명으로 옳은 것은?",
+      "options": [
+        "튜플은 중괄호 { }를 이용하여 선언한다.",
+        "튜플은 값을 생성한 후 요소를 변경(수정/삭제)할 수 없다.",
+        "튜플은 중복된 값을 저장할 수 없다.",
+        "튜플은 키(Key)와 값(Value)의 쌍으로 저장된다.",
+        "튜플은 순서가 없는 자료형이다."
+      ],
+      "key": 2,
+      "wrong_feedbacks": [
+        "튜플은 소괄호 ( )를 사용하여 선언합니다.",
+        "튜플은 리스트와 마찬가지로 중복된 값을 가질 수 있습니다.",
+        "키와 값의 쌍으로 저장되는 것은 딕셔너리(Dictionary)입니다.",
+        "튜플은 인덱스를 가지는 순서가 있는 자료형입니다."
+      ],
+      "hint": "튜플은 읽기 전용 리스트와 유사한 성격을 가집니다."
+    },
+    {
+      "id": 13,
+      "type": "subjective",
+      "question": "a 변수에 10을 대입하고, b 변수에 20을 대입한 후, 두 변수의 합(a + b)을 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "a = 10, b = 20 과 print(a + b) 를 사용하세요."
+    },
+    {
+      "id": 15,
+      "type": "subjective",
+      "question": "변수 score가 85일 때, score가 80 이상이면 'Pass', 그렇지 않으면 'Fail'을 출력하는 조건문(if-else) 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "score = 85 아래에 if score >= 80: 블록을 만드세요."
+    },
+    {
+      "id": 21,
+      "type": "subjective",
+      "question": "클래스 Person을 정의하고, 이름(name)을 입력받아 속성으로 설정하는 생성자(__init__)를 만드세요. 그 후 name이 'Gildong'인 객체를 생성하고 name 속성을 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "class Person: 내부에 def __init__(self, name):을 만드세요."
+    },
+    {
+      "id": 20,
+      "type": "subjective",
+      "question": "문자열을 입력받아 뒤집어서 반환하는 함수 reverse_string(s)를 정의하고, reverse_string('hello')의 결과를 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "슬라이싱 s[::-1]을 사용하면 문자열을 뒤집을 수 있습니다."
+    },
+    {
+      "id": 11,
+      "type": "objective",
+      "question": "클래스 내부에 선언된 인스턴스 메서드가 첫 번째 매개변수로 항상 전달받아야 하는 자기 자신 객체의 참조 키워드는?",
+      "options": [
+        "this",
+        "self",
+        "me",
+        "my",
+        "object"
+      ],
+      "key": 2,
+      "wrong_feedbacks": [
+        "this는 Java/C++/JS 등에서 객체 자신을 나타낼 때 사용하며 파이썬에서는 사용되지 않습니다.",
+        "me는 VB 등 일부 언어에서 사용하나 파이썬 규격이 아닙니다.",
+        "my는 파이썬에서 제공하지 않는 예약어입니다.",
+        "object는 파이썬 모든 클래스의 기본 최상위 클래스 이름입니다."
+      ],
+      "hint": "자기 자신을 뜻하는 영어 단어입니다."
+    },
+    {
+      "id": 6,
+      "type": "objective",
+      "question": "for i in range(1, 6) 루프에서 변수 i가 가질 수 있는 값의 범위로 올바른 것은?",
+      "options": [
+        "1, 2, 3, 4, 5, 6",
+        "1, 2, 3, 4, 5",
+        "0, 1, 2, 3, 4, 5",
+        "2, 3, 4, 5, 6",
+        "1, 3, 5"
+      ],
+      "key": 2,
+      "wrong_feedbacks": [
+        "끝값(stop)으로 지정된 6은 범위 내에 포함되지 않습니다.",
+        "시작값이 1이므로 0은 포함되지 않습니다.",
+        "시작값은 1이므로 2부터 시작하지 않고 1부터 시작합니다.",
+        "기본 간격이 1이므로 홀수만 생성하는 것이 아닌 연속적인 정수를 생성합니다."
+      ],
+      "hint": "range(start, stop)은 start부터 stop-1까지의 숫자를 생성합니다."
+    },
+    {
+      "id": 3,
+      "type": "objective",
+      "question": "파이썬 딕셔너리(Dictionary) 자료형의 특징으로 올바르지 않은 것은?",
+      "options": [
+        "중괄호 { }를 사용하여 선언한다.",
+        "키(Key)와 값(Value)의 쌍으로 데이터를 다룬다.",
+        "동일한 키(Key)를 중복해서 가질 수 있다.",
+        "딕셔너리의 키는 변경 불가능한 자료형(예: 문자열, 튜플)이어야 한다.",
+        "값(Value)은 중복되어도 상관없다."
+      ],
+      "key": 3,
+      "wrong_feedbacks": [
+        "딕셔너리는 중괄호 { }를 사용해 선언하는 것이 맞습니다.",
+        "키와 값의 쌍으로 저장하는 구조가 맞습니다.",
+        "딕셔너리는 변경 불가능한 고유의 키를 가집니다.",
+        "값(Value)은 고유할 필요가 없어서 중복 저장이 가능합니다."
+      ],
+      "hint": "딕셔너리에서 키는 각 요소를 구분하는 고유한 값이어야 합니다."
+    },
+    {
+      "id": 17,
+      "type": "subjective",
+      "question": "while문을 활용하여 1부터 3까지 출력하는 코드를 작성하세요.",
+      "options": [],
+      "key": null,
+      "wrong_feedbacks": [],
+      "hint": "변수 i = 1로 시작해서 조건문 i <= 3을 걸고 i를 1씩 증가시키세요."
+    }
+  ],
+  "user_results": [
+    {
+      "id": 8,
+      "type": "objective",
+      "user_input": null,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "제출된 답안이 없습니다."
+    },
+    {
+      "id": 2,
+      "type": "objective",
+      "user_input": null,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "제출된 답안이 없습니다."
+    },
+    {
+      "id": 13,
+      "type": "subjective",
+      "user_input": "",
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "제출된 코드가 없습니다."
+    },
+    {
+      "id": 15,
+      "type": "subjective",
+      "user_input": "# 코드를 작성하세요\ndsadasd",
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "시스템 에러: [Errno 13] Permission denied: 'temp_test_3.py'"
+    },
+    {
+      "id": 21,
+      "type": "subjective",
+      "user_input": "",
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "제출된 코드가 없습니다."
+    },
+    {
+      "id": 20,
+      "type": "subjective",
+      "user_input": "",
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "제출된 코드가 없습니다."
+    },
+    {
+      "id": 11,
+      "type": "objective",
+      "user_input": null,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "제출된 답안이 없습니다."
+    },
+    {
+      "id": 6,
+      "type": "objective",
+      "user_input": null,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "제출된 답안이 없습니다."
+    },
+    {
+      "id": 3,
+      "type": "objective",
+      "user_input": null,
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "제출된 답안이 없습니다."
+    },
+    {
+      "id": 17,
+      "type": "subjective",
+      "user_input": "",
+      "is_correct": false,
+      "stdout": "",
+      "applied_feedback": "제출된 코드가 없습니다."
+    }
+  ]
+}
