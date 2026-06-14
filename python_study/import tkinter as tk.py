@@ -40,7 +40,6 @@ _vertex_token_cache = {"access_token": None, "expires_at": 0}
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LIBRARY_DIR = os.path.join(BASE_DIR, "library")
 CONCEPTS_DIR = os.path.join(BASE_DIR, "concepts")
-MOCK_FILE = os.path.join(BASE_DIR, "mock_quiz.json")
 CONFIG_FILE = os.path.join(BASE_DIR, "prompts.json")
 APP_STATE_FILE = os.path.join(BASE_DIR, "app_state.json")
 
@@ -484,7 +483,6 @@ class PythonTutorApp(tk.Tk):
         self.configure(bg=COLOR_BG)
         
         # 상태 변수 (State)
-        self.quiz_data = []          # 전체 문제 뱅크
         self.current_session_quizzes = [] # 현재 세션에서 풀 문제 리스트 (최대 10개)
         self.current_q_index = 0     # 현재 문제 인덱스 (개념, 학습모드용)
         self.session_results = []    # 풀이 결과 리스트
@@ -505,7 +503,6 @@ class PythonTutorApp(tk.Tk):
         self.load_config()
         self.ensure_config_defaults()
         self.load_app_state()
-        self.load_quiz_data()
         self.show_main_menu()
 
     def load_config(self):
@@ -560,10 +557,6 @@ class PythonTutorApp(tk.Tk):
         if len(active) == len(list_concept_files()):
             return f"출제 범위: 전체 개념서 {len(active)}개"
         return f"출제 범위: 선택 개념서 {len(active)}개"
-
-    def load_quiz_data(self):
-        """AI 기반 동적 출제이므로, 로컬 mock 퀴즈 풀은 빈 상태로 초기화합니다."""
-        self.quiz_data = []
 
     def ensure_config_defaults(self):
         """prompts.json에 필요한 키 구조만 보장합니다."""
@@ -752,7 +745,7 @@ class PythonTutorApp(tk.Tk):
 
         tk.Label(
             pad,
-            text="다시 시도하면 같은 모드와 범위로 문제 생성을 재요청합니다. API 키, 네트워크, config.json 설정도 함께 확인하세요.",
+            text="다시 시도하면 같은 모드와 범위로 문제 생성을 재요청합니다. API 키, 네트워크, prompts.json 설정도 함께 확인하세요.",
             font=("Malgun Gothic", 10),
             fg=COLOR_TEXT_MUTED,
             bg=COLOR_CARD,
