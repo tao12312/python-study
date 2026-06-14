@@ -1,0 +1,30 @@
+{
+  "config": {
+    "system_prompt": "You are a friendly AI tutor for Korean beginner learners. Always answer in Korean inside JSON values. Return only valid JSON that matches the requested schema. Do not include markdown, code fences, or extra explanation. 학습자는 개념서의 예시 내용을 모른다는 것을 전제로 지도해야한다(자세한 예시 말고 개념은 안다는 것을 전제).",
+    "schema_prompt": "[JSON output rules]\nReturn exactly one JSON object and nothing else.\n{\n  \"quiz_set\": [\n    {\n      \"id\": 1,\n      \"type\": \"objective\",\n      \"question\": \"question text\",\n      \"options\": [\"option 1\", \"option 2\", \"option 3\", \"option 4\", \"option 5\"],\n      \"key\": 3,\n      \"hint\": \"hint text\",\n      \"wrong_feedbacks\": [\"why option 1 is wrong\", \"why option 2 is wrong\", \"why option 4 is wrong\", \"why option 5 is wrong\"]\n    },\n    {\n      \"id\": 6,\n      \"type\": \"subjective\",\n      \"question\": \"subjective question text\",\n      \"hint\": \"hint text\",\n      \"evaluation_criteria\": \"grading criteria\"\n    }\n  ]\n}\nValidation rules: objective options must have exactly 5 items. key must be an integer from 1 to 5. subjective must include evaluation_criteria.",
+    "mode_notes": {
+      "python": "Current mode is Python learning mode.",
+      "ex": "Current mode is EX mode. Create general subject questions that do not require Python code execution."
+    },
+    "mode_prompts": {
+      "concept": "Create 5 objective questions only from the selected single concept document.",
+      "learning": "Create 10 questions of the selected type ({type_desc}) only from the selected concept document scope.",
+      "test": "Create 10 exam questions only from the selected concept document scope. Questions 1-5 must be objective and questions 6-10 must be subjective."
+    },
+    "type_prompts": {
+      "objective": "For objective questions, include type='objective', question, exactly 5 options, key as an integer from 1 to 5, hint, and wrong_feedbacks for the four wrong options.",
+      "subjective": "For Python subjective questions, include type='subjective', question, hint, and evaluation_criteria. The learner should solve it by writing Python code."
+    },
+    "ex_type_prompts": {
+      "objective": "EX mode objective questions are for non-Python subjects. Do not require code execution. Include type='objective', question, exactly 5 options, key, hint, and wrong_feedbacks.",
+      "subjective": "EX mode subjective questions are for text answers in non-Python subjects. Include type='subjective', question, hint, and evaluation_criteria. Do not require code execution."
+    },
+    "request_prompts": {
+      "concept": "Request: Create exactly 5 objective questions using only the selected concept document.",
+      "learning": "Request: Create exactly 10 {q_type} questions from the selected concept document scope.",
+      "test": "Request: Create exactly 10 questions. Questions 1-5 must be objective and questions 6-10 must be subjective."
+    },
+    "feedback_prompt": "피드백은 예시 답안+ 틀린이유, 보안할 점을 제시. Judge whether the submitted Python code satisfies the question and evaluation criteria using the local execution result. Return only JSON: {\"is_correct\": true, \"feedback\": \"Korean feedback in 2-3 sentences\"}. Use false instead of true when incorrect.",
+    "ex_feedback_prompt": "피드백은 예시 답안+ 틀린이유, 보안할 점을 제시.완벽히 맞는 거만 정답이 아닌 뜻이 같고 핵심을 포함 하면 정답. Judge whether the user's text answer satisfies the question and evaluation criteria. Return only JSON: {\"is_correct\": true, \"feedback\": \"Korean feedback in 2-3 sentences\"}. Use false instead of true when incorrect."
+  }
+}
