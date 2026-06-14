@@ -441,11 +441,55 @@ if __name__ == "__main__":
 
 ##기능 구현 확인 뒤 llm 기능 구현과 편의 기능을 추가하기 위해 ai 기능과 잡다 한 기능을 추가하라는 지시함
 추가해야할 기능: 
-버텍스 ai로 문제 출제, 피드백 해야함. api 키는 json 키. 
+me:버텍스 ai로 문제 출제, 피드백 해야함. api 키는 json 키. 
 개념서 수정, 추가 기능 추가.
 학습 문제 저장소에 저장 및 재 확인, 재 풀이 가능.
 문제 창에서 스크롤 안되는 오류 수정.
 위 기능에 더해 보충 해야할것을 파악하고 계획서를 만든뒤 승인 후 코드 짜야함.
+
+ai:구현 정리했습니다.
+변경한 핵심:
+[import tkinter as tk.py](/C:/Users/LeeDongGun/OneDrive/Desktop/python_study/import tkinter as tk.py) 최상단에 API_KEY = "YOUR_GEMINI_API_KEY_HERE" 유지해서 직접 키 입력 가능
+고정 mock_quiz.json 문제 사용 흐름 제거 상태 유지: 이제 개념/학습/시험 시작 시 AI가 문제 생성
+config.json을 명세서 형식으로 정리:system_prompt
+mode_prompts
+type_prompts
+feedback_prompt
+
+개념 모드: 선택한 .txt 개념 파일만 읽고 객관식 5문제 생성
+학습 모드: concepts 폴더 전체 범위에서 선택 유형 문제 10개 생성
+시험 모드: 전체 범위에서 10문제 생성, 앞 5개 객관식 + 뒤 5개 주관식으로 코드에서 검증/정렬
+AI 응답 quiz_set 검증 추가: 객관식 5지선다/key/주관식 평가기준 구조가 안 맞으면 오류 처리
+주관식 채점: 로컬 실행 후 AI가 is_correct와 feedback을 JSON으로 최종 판정
+기록 저장에 evaluation_criteria도 보존되도록 추가
+개념 모드 UI 문구도 10문항에서 5문항으로 수정
+검증:
+파이썬 문법 검사 통과
+config.json 구조 로드 확인
+시험 모드 프롬프트가 “15번 객관식 / 610번 주관식” 조건을 포함하는지 확인
+실제 API 호출은 키가 필요해서 실행 테스트는 못 했습니다. 최상단 API_KEY에 Gemini 키 넣고 실행하면 됩니다.
+##오류 발생
+
+me: 주관식에서 파이썬 실행하면 오류남. 파악하고 고쳐줘.
+ai:고쳤습니다.
+원인: 주관식 실행 코드가 현재 폴더에 temp_exec.py를 만들려고 해서 Windows/OneDrive 권한 문제로 [Errno 13] Permission denied가 났습니다.
+수정:
+학습 모드 주관식 실행 파일을 tempfile.NamedTemporaryFile(...)로 변경
+시험 모드 주관식 채점의 temp_test_*.py도 같은 방식으로 변경
+실행 후 임시 파일은 그대로 삭제되게 유지
+me:HTTP Error 429: Too Many Requests 이거 뜨는데 ai한테 휴식시간 주게 출력에 텀을 주거나 객관식 문제를 혹시 한개 한개 씩 출력하는거면 한번에 10개 출력하는 거 처럼 한번에 출력하게.
+
+ai:429 완화 처리 넣었습니다.
+변경 내용:
+API 호출 사이에 최소 4초 휴식 시간을 강제로 둠
+HTTP Error 429: Too Many Requests가 뜨면 자동 재시도1차: 8초 대기
+2차: 16초 대기
+3차: 32초 대기
+
+여러 스레드에서 동시에 AI 호출이 들어가도 _api_rate_lock으로 순서를 세워서 요청이 몰리지 않게 함
+문제 생성은 이미 한 번에 묶어서 요청하는 방식이라 그대로 유지했습니다. 객관식도 한 문제씩 API 호출하는 구조가 아니라, 개념 5개/학습 10개/시험 10개를 한 번에 생성합니다.
+
+
 
 
 ## 2차 결과
@@ -2889,7 +2933,7 @@ if __name__ == "__main__":
 
 
 ## 문제 생성 ai 가 너무 가벼운 모델이라 출제가 아쉽다는 것을 파악 후 모델 변경과 학습 자료 수정 및 추가, 파이썬 말고 다른 것도 학습 가능하도록 주관식의 파이썬 실행을 무시하는 모드를 추가 하려함.
-해야할것:개념 학습에 있는 개념서 추가 혹은 제거 기능.
+me:해야할것:개념 학습에 있는 개념서 추가 혹은 제거 기능.
 이는 프롬프트 파일 하나 만들어서 시스템, 개념, 학습용, 시험용, 주관식용 등등. 개념(학습과 시험에 나올 것의 내용)은 따로 폴더 만들어서 그곳에 추가 제거 등 할수 있게. 
 구조도 (프롬 파일) 이곳에 시스템, 학습, 시험, 주관, 객관식 등. 그 안에 (개념 파일). 파일 이름이 개념창의 이름으로.
 또한 학습과 시험에서 범위를 지정하기위해 이 개념서를 선택(여러개 혹은 한개)해서 범위를 좁혀 볼수 있게. 
@@ -2897,6 +2941,22 @@ if __name__ == "__main__":
 추가로  메인 창 오른쪽 혹은 왼쪽 위에 ex모드 버튼(온 오프) 만들고 이것은 주관식 모드에 파이썬이 아니라 txt로 저장되게 해서 파이썬 말고도 다른 과목의 문제를 풀수 있도록.
 ex모드 전용 프롬프트(주, 객관식)도 있어야함. 이에 맞춰서 현재 프롬프트 다듬기도.
 
+ai:
+[prompts.json](C:/Users/LeeDongGun/OneDrive/Desktop/python_study/prompts.json) 추가
+시스템/개념/학습/시험/객관식/주관식/EX 객관식/EX 주관식/피드백 프롬프트 분리.
+[app_state.json](C:/Users/LeeDongGun/OneDrive/Desktop/python_study/app_state.json) 추가
+선택한 개념서 범위와 EX 모드 ON/OFF 저장.
+[import tkinter as tk.py](C:/Users/LeeDongGun/OneDrive/Desktop/python_study/import tkinter as tk.py) 수정
+메인 상단에 EX 모드 토글, 개념서/범위 관리 버튼 추가.
+concepts 폴더를 개념서 저장소로 사용
+관리 화면에서 .txt 파일 추가, 새 개념서 작성, 선택 삭제, 범위 저장 가능.
+학습/시험 문제 출제는 저장된 선택 개념서 범위만 사용
+선택이 없으면 전체 개념서 사용.
+EX 모드에서는 주관식 입력이 “파이썬 코드”가 아니라 텍스트 답안 기준으로 처리
+EX 모드 임시 파일 확장자도 .txt로 바뀌게 했고, AI 평가도 ex_feedback_prompt를 사용합니다.
+
+me:시험 모드에서 제출 누르면 임시저장 안된거만 임시저장시키게(누루기 까먹어도 문제 푼거ai한테 보내게)
+ai:변경한 핵심:[import tkinter as tk.py (line 2056)](/C:/Users/LeeDongGun/OneDrive/Desktop/python_study/import tkinter as tk.py:2056)에 auto_save_unsaved_test_answers()를 추가해서, 시험 모드에서 최종 제출을 누르면 임시 저장 안 된 문항만 화면에서 다시 읽어 자동 저장하게 했습니다.
 
 ##3차 결과
 
