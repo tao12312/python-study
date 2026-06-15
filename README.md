@@ -1,3 +1,13 @@
+#역할
+이동건:기능 및 구조
+김현서:프롬프트 엔지니어링
+양하은: UI 디자인
+
+
+
+
+
+#기능
 API / 모델 설정
 최상단에서 Vertex 서비스 계정 JSON 입력
 VERTEX_PROJECT_ID, VERTEX_LOCATION 설정 가능
