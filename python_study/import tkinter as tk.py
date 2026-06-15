@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog, simpledialog
 import json
 import os
 import datetime
@@ -14,6 +14,7 @@ import threading
 import time
 import base64
 import hashlib
+import shutil
 
 # ==========================================
 # 0. API 설정 (사용자 입력)
@@ -23,10 +24,12 @@ import hashlib
 VERTEX_SERVICE_ACCOUNT_JSON = r""""""
 VERTEX_PROJECT_ID = ""                       # 비워두면 JSON 키의 project_id를 사용합니다.
 VERTEX_LOCATION = "global"
-GEMINI_MODEL = "gemini-3.1-flash-lite"
+PROBLEM_GEMINI_MODEL = "gemini-3.5-flash"                    # 문제 출제 전용 모델명 입력칸. 비워두면 아래 피드백 모델을 사용합니다.
+GEMINI_MODEL = "gemini-3.1-flash-lite"       # 피드백/주관식 채점용 모델
 API_CALL_DELAY_SECONDS = 4.0                # API 호출 사이 최소 휴식 시간
 API_MAX_RETRIES = 3                         # 429 등 일시 오류 재시도 횟수
 API_RETRY_BASE_DELAY_SECONDS = 8.0          # 429 재시도 기본 대기 시간
+API_MAX_OUTPUT_TOKENS = 10000               # AI 응답 최대 출력 토큰
 _api_rate_lock = threading.Lock()
 _last_api_call_at = 0.0
 _vertex_token_cache = {"access_token": None, "expires_at": 0}
@@ -37,35 +40,36 @@ _vertex_token_cache = {"access_token": None, "expires_at": 0}
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LIBRARY_DIR = os.path.join(BASE_DIR, "library")
 CONCEPTS_DIR = os.path.join(BASE_DIR, "concepts")
-MOCK_FILE = os.path.join(BASE_DIR, "mock_quiz.json")
-CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
+CONFIG_FILE = os.path.join(BASE_DIR, "prompts.json")
+APP_STATE_FILE = os.path.join(BASE_DIR, "app_state.json")
 
-DEFAULT_CONFIG = {
-    "config": {
-        "system_prompt": (
-            "당신은 파이썬 초보 학습자를 가르치는 전문 튜터입니다. "
-            "반드시 요청한 JSON 스키마만 출력하세요. 설명, 마크다운, 코드블록은 금지입니다."
-        ),
-        "mode_prompts": {
-            "concept": "제공된 단일 개념 텍스트에서만 객관식 5문제를 출제하세요.",
-            "learning": "제공된 전체 개념 범위에서 사용자가 선택한 유형({type_desc})의 문제 10개를 출제하세요.",
-            "test": "제공된 전체 개념 범위에서 시험 문제 10개를 출제하세요. 1~5번은 객관식, 6~10번은 주관식으로 고정하세요."
-        },
-        "type_prompts": {
-            "objective": (
-                "객관식 문제는 type='objective', question, options(정확히 5개), "
-                "key(1~5 정수), hint, wrong_feedbacks(정답을 제외한 4개 오답 이유 배열)를 포함하세요."
-            ),
-            "subjective": (
-                "주관식 코딩 문제는 type='subjective', question, hint, evaluation_criteria를 포함하세요. "
-                "초보자가 5~15줄 정도로 풀 수 있게 내세요."
-            )
-        },
-        "feedback_prompt": (
-            "문제, 평가 기준, 사용자 코드, 로컬 실행 결과를 보고 문제 의도에 맞는지 최종 판정하세요. "
-            "반드시 JSON으로만 {\"is_correct\": true/false, \"feedback\": \"2~3문장 피드백\"} 형식으로 답하세요."
-        )
-    }
+REQUIRED_PROMPT_CONFIG = {
+    "system_prompt": "",
+    "schema_prompt": "",
+    "mode_notes": {
+        "python": "",
+        "ex": ""
+    },
+    "mode_prompts": {
+        "concept": "",
+        "learning": "",
+        "test": ""
+    },
+    "type_prompts": {
+        "objective": "",
+        "subjective": ""
+    },
+    "ex_type_prompts": {
+        "objective": "",
+        "subjective": ""
+    },
+    "request_prompts": {
+        "concept": "",
+        "learning": "",
+        "test": ""
+    },
+    "feedback_prompt": "",
+    "ex_feedback_prompt": ""
 }
 
 # 테마 컬러 정의 (Modern Light Slate Theme)
@@ -81,13 +85,25 @@ COLOR_ERROR = "#f56565"       # 실패/오답 (레드)
 COLOR_ERROR_LIGHT = "#fff5f5"  # 연한 레드 (배경용)
 COLOR_BORDER = "#e2e8f0"      # 보더/구분선
 
-def load_all_concepts_content():
+def list_concept_files():
+    try:
+        files = [f for f in os.listdir(CONCEPTS_DIR) if f.endswith(".txt")]
+        files.sort()
+        return files
+    except Exception:
+        return []
+
+def safe_concept_filename(title):
+    safe = "".join(ch if ch.isalnum() or ch in (" ", "_", "-") else "_" for ch in title.strip())
+    safe = safe.replace(" ", "_").strip("_")
+    return f"{safe or 'concept'}.txt"
+
+def load_all_concepts_content(selected_files=None):
     """concepts 폴더의 모든 .txt 개념글 목록 및 내용을 로드합니다."""
     concepts_text = ""
     try:
         if os.path.exists(CONCEPTS_DIR):
-            files = [f for f in os.listdir(CONCEPTS_DIR) if f.endswith(".txt")]
-            files.sort()
+            files = selected_files if selected_files else list_concept_files()
             for f in files:
                 title = f.replace(".txt", "").replace("_", " ")
                 filepath = os.path.join(CONCEPTS_DIR, f)
@@ -111,8 +127,27 @@ def load_single_concept_content(filename):
     except Exception as e:
         return f"개념을 읽을 수 없습니다: {e}"
 
+def make_empty_prompt_config():
+    return {"config": json.loads(json.dumps(REQUIRED_PROMPT_CONFIG, ensure_ascii=False))}
+
+def merge_prompt_config_shape(config_data):
+    if not isinstance(config_data, dict):
+        config_data = {}
+    cfg = config_data.setdefault("config", {})
+    for key, value in REQUIRED_PROMPT_CONFIG.items():
+        if isinstance(value, dict):
+            target = cfg.setdefault(key, {})
+            if not isinstance(target, dict):
+                cfg[key] = value.copy()
+                continue
+            for sub_key, sub_value in value.items():
+                target.setdefault(sub_key, sub_value)
+        else:
+            cfg.setdefault(key, value)
+    return config_data
+
 def clean_json_string(s):
-    """Gemini API 응답에서 JSON 마크다운 태그를 제거하고 앞뒤 공백을 정돈합니다."""
+    """Gemini API 응답에서 첫 JSON 객체/배열만 추출합니다."""
     s = s.strip()
     if s.startswith("```json"):
         s = s[7:]
@@ -120,7 +155,18 @@ def clean_json_string(s):
         s = s[3:]
     if s.endswith("```"):
         s = s[:-3]
-    return s.strip()
+    s = s.strip()
+    decoder = json.JSONDecoder()
+    for start, ch in enumerate(s):
+        if ch not in "{[":
+            continue
+        candidate = s[start:]
+        try:
+            _, end = decoder.raw_decode(candidate)
+            return candidate[:end].strip()
+        except json.JSONDecodeError:
+            continue
+    return s
 
 def b64url(data):
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
@@ -223,13 +269,13 @@ def get_vertex_access_token():
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         method="POST"
     )
-    with urllib.request.urlopen(req, timeout=40) as response:
+    with urllib.request.urlopen(req, timeout=180) as response:
         token_data = json.loads(response.read().decode("utf-8"))
     _vertex_token_cache["access_token"] = token_data["access_token"]
     _vertex_token_cache["expires_at"] = time.time() + int(token_data.get("expires_in", 3600))
     return token_data["access_token"]
 
-def call_generative_api_raw(prompt, system_prompt=None):
+def call_generative_api_raw(prompt, system_prompt=None, model_name=None):
     """Gemini API를 REST 호출 형태로 통신합니다."""
     global _last_api_call_at
     service_account = load_vertex_service_account()
@@ -237,10 +283,13 @@ def call_generative_api_raw(prompt, system_prompt=None):
     if not project_id:
         raise ValueError("VERTEX_PROJECT_ID가 비어 있고 서비스 계정 JSON에도 project_id가 없습니다.")
     location = VERTEX_LOCATION.strip() or "global"
+    selected_model = (model_name or GEMINI_MODEL).strip()
+    if not selected_model:
+        raise ValueError("사용할 Gemini 모델명이 비어 있습니다.")
     host = "aiplatform.googleapis.com" if location == "global" else f"{location}-aiplatform.googleapis.com"
     url = (
         f"https://{host}/v1/projects/{project_id}/locations/{location}"
-        f"/publishers/google/models/{GEMINI_MODEL}:generateContent"
+        f"/publishers/google/models/{selected_model}:generateContent"
     )
     access_token = get_vertex_access_token()
     
@@ -251,14 +300,15 @@ def call_generative_api_raw(prompt, system_prompt=None):
     
     payload = {
         "contents": [{
-            "role": "user",     # <--- 이 줄을 반드시 추가하세요!
+            "role": "user",    
             "parts": [{
                 "text": prompt
             }]
         }],
         "generationConfig": {
             "responseMimeType": "application/json",
-            "temperature": 0.7
+            "temperature": 0.7,
+            "maxOutputTokens": API_MAX_OUTPUT_TOKENS
         }
     }
     
@@ -280,7 +330,7 @@ def call_generative_api_raw(prompt, system_prompt=None):
 
         req = urllib.request.Request(url, data=body, headers=headers, method="POST")
         try:
-            with urllib.request.urlopen(req, timeout=40) as response:
+            with urllib.request.urlopen(req, timeout=180) as response:
                 res_data = json.loads(response.read().decode("utf-8"))
                 text = res_data["candidates"][0]["content"]["parts"][0]["text"]
                 return text
@@ -326,6 +376,49 @@ def create_flat_button(parent, text, bg, fg, hover_bg, command, font=("Malgun Go
     btn.bind("<Enter>", lambda e: btn.config(bg=hover_bg) if btn['state'] != 'disabled' else None)
     btn.bind("<Leave>", lambda e: btn.config(bg=bg) if btn['state'] != 'disabled' else None)
     return btn
+
+def estimate_text_height(text, width_chars=72, min_height=2, max_height=6):
+    """긴 문제 본문은 고정 높이 안에서 스크롤되도록 대략적인 줄 수를 계산합니다."""
+    lines = 0
+    for line in str(text).splitlines() or [""]:
+        lines += max(1, (len(line) // width_chars) + 1)
+    return max(min_height, min(max_height, lines))
+
+def create_scrollable_question_box(parent, text, bg=COLOR_CARD, fg=COLOR_DARK, font=("Malgun Gothic", 12, "bold"),
+                                   min_height=2, max_height=6, width_chars=72):
+    """문제 본문용 읽기 전용 스크롤 박스."""
+    frame = tk.Frame(parent, bg=bg, bd=1, relief="solid", highlightthickness=0)
+    line_count = estimate_text_height(text, width_chars=width_chars, min_height=1, max_height=999)
+    height = estimate_text_height(text, width_chars=width_chars, min_height=min_height, max_height=max_height)
+    needs_scroll = line_count > max_height
+    
+    scrollbar = ttk.Scrollbar(frame, orient="vertical")
+    text_widget = tk.Text(frame, wrap="word", height=height, font=font, bg=bg, fg=fg,
+                          relief="flat", bd=0, padx=10, pady=8, cursor="arrow",
+                          yscrollcommand=scrollbar.set)
+    scrollbar.config(command=text_widget.yview)
+    
+    text_widget.insert("1.0", text)
+    text_widget.config(state="disabled")
+    text_widget.pack(side="left", fill="both", expand=True)
+    if needs_scroll:
+        scrollbar.pack(side="right", fill="y")
+    
+    def on_question_wheel(event):
+        if getattr(event, "num", None) == 4:
+            delta = -1
+        elif getattr(event, "num", None) == 5:
+            delta = 1
+        else:
+            delta = int(-1 * (event.delta / 120))
+        text_widget.yview_scroll(delta, "units")
+        return "break"
+    
+    if needs_scroll:
+        text_widget.bind("<MouseWheel>", on_question_wheel)
+        text_widget.bind("<Button-4>", on_question_wheel)
+        text_widget.bind("<Button-5>", on_question_wheel)
+    return frame
 
 class ScrollableFrame(tk.Frame):
     """스크롤이 가능한 프레임 클래스 (Canvas + Scrollbar)"""
@@ -390,15 +483,17 @@ class PythonTutorApp(tk.Tk):
         self.configure(bg=COLOR_BG)
         
         # 상태 변수 (State)
-        self.quiz_data = []          # 전체 문제 뱅크
         self.current_session_quizzes = [] # 현재 세션에서 풀 문제 리스트 (최대 10개)
         self.current_q_index = 0     # 현재 문제 인덱스 (개념, 학습모드용)
         self.session_results = []    # 풀이 결과 리스트
         self.current_mode = ""       # "concept", "learning", "test"
+        self.selected_concepts = []
+        self.ex_mode = False
         
         # 시험 모드용 임시 저장 변수
         # 구조: { quiz_id: { "objective_ans": int, "subjective_code": str, "saved": bool } }
         self.test_temp_answers = {}
+        self.test_answer_widgets = {}
         
         # UI 프레임 참조 변수
         self.main_container = None
@@ -407,30 +502,17 @@ class PythonTutorApp(tk.Tk):
         ensure_environment()
         self.load_config()
         self.ensure_config_defaults()
-        self.load_quiz_data()
+        self.load_app_state()
         self.show_main_menu()
 
     def load_config(self):
-        """config.json에서 프롬프트 설정을 로드하거나 없으면 기본값을 생성합니다."""
-        default_config = {
-            "config": {
-                "system_prompt": "당신은 파이썬 프로그래밍을 가르치는 전문 AI 튜터입니다. 반드시 지정된 JSON 형식으로만 답변을 출력해야 합니다. JSON 마크다운 기호(예: ```json)를 포함하지 않고, 순수 JSON 텍스트만 반환하세요.",
-                "mode_prompts": {
-                    "concept": "제시된 개념지 내용을 바탕으로 해당 개념을 잘 이해했는지 검증하는 객관식 5문제를 출제해 주세요. 출제되는 5문제 모두 객관식(objective)이어야 합니다.",
-                    "learning": "제공된 파이썬 개념들을 참고하여 사용자가 선택한 유형({type_desc})에 맞는 문제 10문제를 출제해 주세요.",
-                    "test": "제공된 파이썬 개념 전체 범위에서 종합 실력 평가를 위한 10문제를 출제해 주세요. 반드시 처음 5문제는 객관식(objective)으로, 나머지 5문제는 주관식(subjective)으로 구성해 주세요."
-                },
-                "type_prompts": {
-                    "objective": "객관식(objective) 형식: 'question' 필드에 문제, 'options' 필드에 5개 선지(배열), 'key' 필드에 정답 번호(1~5 정수), 'hint' 필드에 힌트, 'wrong_feedbacks' 필드에 4개 오답 선지 각각의 오답 피드백(배열, 순서대로 1,2,4,5번 오답 피드백)을 작성하세요.",
-                    "subjective": "주관식(subjective) 코딩 형식: 'question' 필드에 유저가 코드를 작성해야 하는 파이썬 프로그래밍 문제, 'hint' 필드에 힌트, 'evaluation_criteria' 필드에 채점 기준을 작성하세요."
-                },
-                "feedback_prompt": "제시된 문제, 사용자가 작성한 코드, 실행 콘솔 출력 결과(stdout), 정답 여부를 분석하여, 사용자의 코드 스타일이나 알고리즘, 에러 원인에 대해 친절하고 명확하게 피드백해 주세요."
-            }
-        }
+        """prompts.json에서 프롬프트 설정을 로드하거나 없으면 빈 구조를 생성합니다."""
+        default_config = make_empty_prompt_config()
         try:
             if os.path.exists(CONFIG_FILE):
                 with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                    self.config_data = json.load(f)
+                    raw = f.read()
+                self.config_data = json.loads(clean_json_string(raw))
             else:
                 self.config_data = default_config
                 with open(CONFIG_FILE, "w", encoding="utf-8") as f:
@@ -439,31 +521,51 @@ class PythonTutorApp(tk.Tk):
             self.config_data = default_config
             print(f"설정 로드 중 오류 발생: {e}")
 
-    def load_quiz_data(self):
-        """AI 기반 동적 출제이므로, 로컬 mock 퀴즈 풀은 빈 상태로 초기화합니다."""
-        self.quiz_data = []
+    def load_app_state(self):
+        self.selected_concepts = []
+        self.ex_mode = False
+        try:
+            if os.path.exists(APP_STATE_FILE):
+                with open(APP_STATE_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                available = set(list_concept_files())
+                self.selected_concepts = [f for f in data.get("selected_concepts", []) if f in available]
+                self.ex_mode = bool(data.get("ex_mode", False))
+        except Exception as e:
+            print(f"앱 상태 로드 실패: {e}")
+
+    def save_app_state(self):
+        data = {
+            "selected_concepts": self.selected_concepts,
+            "ex_mode": self.ex_mode
+        }
+        try:
+            with open(APP_STATE_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"앱 상태 저장 실패: {e}")
+
+    def get_active_concept_files(self):
+        available = list_concept_files()
+        selected = [f for f in self.selected_concepts if f in available]
+        return selected or available
+
+    def get_active_scope_label(self):
+        active = self.get_active_concept_files()
+        if not active:
+            return "출제 범위: 개념서 없음"
+        if len(active) == len(list_concept_files()):
+            return f"출제 범위: 전체 개념서 {len(active)}개"
+        return f"출제 범위: 선택 개념서 {len(active)}개"
 
     def ensure_config_defaults(self):
-        """명세서 형식의 config 값을 보장하고 config.json에 반영합니다."""
-        if not isinstance(getattr(self, "config_data", None), dict):
-            self.config_data = {}
-        cfg = self.config_data.setdefault("config", {})
-        defaults = DEFAULT_CONFIG["config"]
-        for key, value in defaults.items():
-            if isinstance(value, dict):
-                target = cfg.setdefault(key, {})
-                if not isinstance(target, dict):
-                    cfg[key] = value.copy()
-                    continue
-                for sub_key, sub_value in value.items():
-                    target.setdefault(sub_key, sub_value)
-            else:
-                cfg.setdefault(key, value)
+        """prompts.json에 필요한 키 구조만 보장합니다."""
+        self.config_data = merge_prompt_config_shape(getattr(self, "config_data", None))
         try:
             with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(self.config_data, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"config.json 저장 실패: {e}")
+            print(f"prompts.json 저장 실패: {e}")
 
     def get_wrong_feedback(self, q_data, selected_key):
         """선택한 오답에 대한 피드백을 JSON 구조에 맞춰 반환합니다."""
@@ -494,101 +596,6 @@ class PythonTutorApp(tk.Tk):
             return feedbacks.get(str(selected_key), "오답입니다.")
             
         return "오답입니다."
-
-    def build_generation_prompt(self, mode, concept_filename=None, q_type=None):
-        config = self.config_data.get("config", {})
-        system_prompt = config.get("system_prompt", "")
-        
-        mode_prompts = config.get("mode_prompts", {})
-        type_prompts = config.get("type_prompts", {})
-        
-        # Enforce json formatting rule
-        json_format_prompt = """
-[출력 형식 제한]
-반드시 다음 구조의 JSON 형식으로만 응답해야 합니다. 다른 텍스트는 일절 제외하고 순수 JSON 문자열만 출력해 주세요:
-{
-  "quiz_set": [
-    {
-      "id": 1,
-      "type": "objective",
-      "question": "문제 내용",
-      "options": [
-        "1번 선지 내용",
-        "2번 선지 내용",
-        "3번 선지 내용",
-        "4번 선지 내용",
-        "5번 선지 내용"
-      ],
-      "key": 3,
-      "hint": "힌트 내용",
-      "wrong_feedbacks": [
-        "1번 선지가 오답인 이유",
-        "2번 선지가 오답인 이유",
-        "4번 선지가 오답인 이유",
-        "5번 선지가 오답인 이유"
-      ]
-    },
-    {
-      "id": 6,
-      "type": "subjective",
-      "question": "문제 내용",
-      "hint": "힌트 내용",
-      "evaluation_criteria": "채점 기준 설명"
-    }
-  ]
-}
-참고사항:
-1. json 이외의 임의의 대화, 마크다운 기호(예: ```json), 해설 등을 절대 추가하지 마세요.
-2. 모든 문제 객체는 고유한 순차적 정수 id 필드를 가져야 합니다. 예: 1, 2, 3...
-"""
-
-        full_system_prompt = system_prompt + "\\n" + json_format_prompt
-        
-        user_prompt = ""
-        
-        if mode == "concept":
-            concept_text = load_single_concept_content(concept_filename)
-            mode_desc = mode_prompts.get("concept", "")
-            type_desc = type_prompts.get("objective", "")
-            user_prompt = (
-                f"{mode_desc}\\n\\n"
-                f"[유형 설명]\\n{type_desc}\\n\\n"
-                f"[학습 개념 본문]\\n{concept_text}\\n\\n"
-                f"[요청 사항]\\n"
-                f"위의 개념 본문을 바탕으로 총 5개의 객관식(objective) 문제를 출제해 주세요.\\n"
-                f"정답 선지 번호(key)는 1에서 5 사이의 정수여야 합니다."
-            )
-            
-        elif mode == "learning":
-            concepts_text = load_all_concepts_content()
-            type_name = "객관식(objective)" if q_type == "objective" else "주관식 코딩(subjective)"
-            mode_desc = mode_prompts.get("learning", "").replace("{type_desc}", type_name)
-            type_desc = type_prompts.get(q_type, "")
-            user_prompt = (
-                f"{mode_desc}\\n\\n"
-                f"[유형 설명]\\n{type_desc}\\n\\n"
-                f"[학습 범위 개념들]\\n{concepts_text}\\n\\n"
-                f"[요청 사항]\\n"
-                f"전체 개념 범위를 참고하여 총 10개의 {type_name} 문제를 출제해 주세요."
-            )
-            
-        elif mode == "test":
-            concepts_text = load_all_concepts_content()
-            mode_desc = mode_prompts.get("test", "")
-            type_obj_desc = type_prompts.get("objective", "")
-            type_sub_desc = type_prompts.get("subjective", "")
-            user_prompt = (
-                f"{mode_desc}\\n\\n"
-                f"[객관식 유형 설명]\\n{type_obj_desc}\\n\\n"
-                f"[주관식 유형 설명]\\n{type_sub_desc}\\n\\n"
-                f"[학습 범위 개념들]\\n{concepts_text}\\n\\n"
-                f"[요청 사항]\\n"
-                f"전체 개념 범위를 참고하여 총 10개의 문제를 출제해 주세요.\\n"
-                f"반드시 처음 5문제는 객관식(objective, id 1~5)으로 출제하고,\\n"
-                f"나머지 5문제는 주관식(subjective, id 6~10)으로 출제해야 합니다."
-            )
-            
-        return full_system_prompt, user_prompt
 
     def generate_ai_quizzes_async(self, mode, concept_filename=None, q_type=None):
         # Vertex 서비스 계정 JSON 확인
@@ -631,7 +638,8 @@ class PythonTutorApp(tk.Tk):
         def api_worker():
             try:
                 system_p, user_p = self.build_generation_prompt(mode, concept_filename, q_type)
-                raw_response = call_generative_api_raw(user_p, system_p)
+                problem_model = PROBLEM_GEMINI_MODEL.strip() or GEMINI_MODEL
+                raw_response = call_generative_api_raw(user_p, system_p, model_name=problem_model)
                 cleaned_response = clean_json_string(raw_response)
                 
                 response_json = json.loads(cleaned_response)
@@ -675,6 +683,7 @@ class PythonTutorApp(tk.Tk):
                 self.show_learning_question()
             elif mode == "test":
                 self.test_temp_answers = {}
+                self.test_answer_widgets = {}
                 for q in self.current_session_quizzes:
                     self.test_temp_answers[q["id"]] = {
                         "objective_ans": None,
@@ -736,7 +745,7 @@ class PythonTutorApp(tk.Tk):
 
         tk.Label(
             pad,
-            text="다시 시도하면 같은 모드와 범위로 문제 생성을 재요청합니다. API 키, 네트워크, config.json 설정도 함께 확인하세요.",
+            text="다시 시도하면 같은 모드와 범위로 문제 생성을 재요청합니다. API 키, 네트워크, prompts.json 설정도 함께 확인하세요.",
             font=("Malgun Gothic", 10),
             fg=COLOR_TEXT_MUTED,
             bg=COLOR_CARD,
@@ -807,8 +816,6 @@ class PythonTutorApp(tk.Tk):
 {stdout}
 
 정답 여부: {"정답" if is_correct else "오답"}
-
-사용자의 코드 스타일, 효율성, 개선방향 등을 짧고 명확하게 설명하는 튜터 피드백을 작성해 주세요. (한글로 2~3문장)
 """
         try:
             feedback = call_generative_api_raw(prompt, system_prompt)
@@ -821,69 +828,49 @@ class PythonTutorApp(tk.Tk):
                 return f"실행 에러가 발생했습니다. {stdout}"
 
     def build_generation_prompt(self, mode, concept_filename=None, q_type=None):
-        """API 문제 생성용 프롬프트를 명세서 형식으로 구성합니다."""
+        """API 문제 생성 프롬프트를 현재 범위와 EX 모드에 맞게 구성합니다."""
         config = self.config_data.get("config", {})
-        system_prompt = config.get("system_prompt", DEFAULT_CONFIG["config"]["system_prompt"])
+        system_prompt = config.get("system_prompt", "")
+        schema_prompt = config.get("schema_prompt", "")
+        mode_notes = config.get("mode_notes", {})
         mode_prompts = config.get("mode_prompts", {})
-        type_prompts = config.get("type_prompts", {})
-        schema_prompt = """
-[JSON 출력 규칙]
-아래 JSON 객체 하나만 출력하세요. 다른 설명, 마크다운, 코드블록은 절대 넣지 마세요.
-{
-  "quiz_set": [
-    {
-      "id": 1,
-      "type": "objective",
-      "question": "문제 내용",
-      "options": ["1번 선지", "2번 선지", "3번 선지", "4번 선지", "5번 선지"],
-      "key": 3,
-      "hint": "힌트",
-      "wrong_feedbacks": ["오답 이유 1", "오답 이유 2", "오답 이유 4", "오답 이유 5"]
-    },
-    {
-      "id": 6,
-      "type": "subjective",
-      "question": "코딩 문제 내용",
-      "hint": "힌트",
-      "evaluation_criteria": "정답 판별 기준"
-    }
-  ]
-}
+        normal_type_prompts = config.get("type_prompts", {})
+        ex_type_prompts = config.get("ex_type_prompts", {})
+        request_prompts = config.get("request_prompts", {})
+        type_prompts = ex_type_prompts if self.ex_mode else normal_type_prompts
 
-[필수 검증 규칙]
-- objective는 options가 정확히 5개여야 합니다.
-- objective의 key는 1~5 정수여야 합니다.
-- objective의 wrong_feedbacks는 정답 선지를 제외한 오답 4개에 대한 이유입니다.
-- subjective는 evaluation_criteria를 반드시 포함해야 합니다.
-"""
-        full_system_prompt = f"{system_prompt}\n{schema_prompt}"
+        mode_note = mode_notes.get("ex" if self.ex_mode else "python", "")
+        full_system_prompt = "\n".join(part for part in (system_prompt, mode_note, schema_prompt) if part)
 
         if mode == "concept":
             concept_text = load_single_concept_content(concept_filename)
+            request_text = request_prompts.get("concept", "")
             user_prompt = (
-                f"{mode_prompts.get('concept', DEFAULT_CONFIG['config']['mode_prompts']['concept'])}\n\n"
-                f"[문제 유형]\n{type_prompts.get('objective', DEFAULT_CONFIG['config']['type_prompts']['objective'])}\n\n"
-                f"[출제 범위: 선택한 개념만]\n{concept_text}\n\n"
-                "요청: 위 개념 텍스트 안의 내용만 사용해서 객관식 5문제를 출제하세요."
+                f"{mode_prompts.get('concept', '')}\n\n"
+                f"[문제 유형]\n{type_prompts.get('objective', '')}\n\n"
+                f"[출제 범위: 선택한 개념서]\n{concept_text}\n\n"
+                f"{request_text}"
             )
         elif mode == "learning":
-            concepts_text = load_all_concepts_content()
-            type_desc = "객관식(objective)" if q_type == "objective" else "주관식 코딩(subjective)"
-            mode_prompt = mode_prompts.get("learning", DEFAULT_CONFIG["config"]["mode_prompts"]["learning"]).replace("{type_desc}", type_desc)
+            concepts_text = load_all_concepts_content(self.get_active_concept_files())
+            type_desc = "객관식(objective)" if q_type == "objective" else "주관식(subjective)"
+            mode_prompt = mode_prompts.get("learning", "").replace("{type_desc}", type_desc)
+            request_text = request_prompts.get("learning", "").format(q_type=q_type, type_desc=type_desc)
             user_prompt = (
                 f"{mode_prompt}\n\n"
                 f"[문제 유형]\n{type_prompts.get(q_type, '')}\n\n"
-                f"[출제 범위: 전체 개념]\n{concepts_text}\n\n"
-                f"요청: 전체 개념 범위에서 {q_type} 문제만 정확히 10개 출제하세요."
+                f"[출제 범위: {self.get_active_scope_label()}]\n{concepts_text}\n\n"
+                f"{request_text}"
             )
         else:
-            concepts_text = load_all_concepts_content()
+            concepts_text = load_all_concepts_content(self.get_active_concept_files())
+            request_text = request_prompts.get("test", "")
             user_prompt = (
-                f"{mode_prompts.get('test', DEFAULT_CONFIG['config']['mode_prompts']['test'])}\n\n"
+                f"{mode_prompts.get('test', '')}\n\n"
                 f"[객관식 형식]\n{type_prompts.get('objective', '')}\n\n"
                 f"[주관식 형식]\n{type_prompts.get('subjective', '')}\n\n"
-                f"[출제 범위: 전체 개념]\n{concepts_text}\n\n"
-                "요청: 총 10문제를 출제하세요. 1~5번은 objective, 6~10번은 subjective로 고정하세요."
+                f"[출제 범위: {self.get_active_scope_label()}]\n{concepts_text}\n\n"
+                f"{request_text}"
             )
         return full_system_prompt, user_prompt
 
@@ -946,8 +933,11 @@ class PythonTutorApp(tk.Tk):
             }
 
         config = self.config_data.get("config", {})
-        system_prompt = config.get("system_prompt", DEFAULT_CONFIG["config"]["system_prompt"])
-        feedback_prompt = config.get("feedback_prompt", DEFAULT_CONFIG["config"]["feedback_prompt"])
+        system_prompt = config.get("system_prompt", "")
+        if self.ex_mode:
+            feedback_prompt = config.get("ex_feedback_prompt", "")
+        else:
+            feedback_prompt = config.get("feedback_prompt", "")
         prompt = f"""
 {feedback_prompt}
 
@@ -965,9 +955,6 @@ class PythonTutorApp(tk.Tk):
 
 [로컬 실행 결과 stdout/stderr]
 {stdout}
-
-JSON 하나만 출력하세요:
-{{"is_correct": true, "feedback": "피드백"}}
 """
         try:
             raw = call_generative_api_raw(prompt, system_prompt)
@@ -1006,6 +993,27 @@ JSON 하나만 출력하세요:
         lbl_title.pack(pady=10)
         lbl_subtitle = tk.Label(header_frame, text="AI 튜터 기반의 개인화된 파이썬 학습 환경", font=("Malgun Gothic", 11), fg="#a0aec0", bg=COLOR_DARK)
         lbl_subtitle.pack()
+        top_tools = tk.Frame(header_frame, bg=COLOR_DARK)
+        top_tools.pack(fill="x", padx=16, pady=(4, 10))
+        ex_text = "EX 모드: 켜짐" if self.ex_mode else "EX 모드: 꺼짐"
+        create_flat_button(
+            top_tools,
+            ex_text,
+            COLOR_SUCCESS if self.ex_mode else "#4a5568",
+            "#ffffff",
+            "#38a169" if self.ex_mode else COLOR_DARK,
+            self.toggle_ex_mode,
+            font=("Malgun Gothic", 9, "bold")
+        ).pack(side="left", ipadx=12, ipady=3)
+        create_flat_button(
+            top_tools,
+            "개념서/범위 관리",
+            COLOR_PRIMARY,
+            "#ffffff",
+            COLOR_PRIMARY_HOVER,
+            self.show_concept_manager,
+            font=("Malgun Gothic", 9, "bold")
+        ).pack(side="right", ipadx=12, ipady=3)
         
         # 카드 프레임 레이아웃
         cards_frame = tk.Frame(self.main_container, bg=COLOR_BG)
@@ -1071,6 +1079,199 @@ JSON 하나만 출력하세요:
     # 4-1. 개념 모드 관련 화면
     # ------------------------------------------
     
+    def toggle_ex_mode(self):
+        self.ex_mode = not self.ex_mode
+        self.save_app_state()
+        self.show_main_menu()
+
+    def show_concept_manager(self):
+        self.init_container()
+
+        header = tk.Frame(self.main_container, bg=COLOR_DARK)
+        header.pack(fill="x")
+        tk.Label(header, text="개념서/출제 범위 관리", font=("Malgun Gothic", 16, "bold"), fg="#ffffff", bg=COLOR_DARK).pack(pady=8)
+
+        body = tk.Frame(self.main_container, bg=COLOR_BG)
+        body.pack(expand=True, fill="both", padx=36, pady=24)
+
+        info = tk.Label(
+            body,
+            text="체크한 개념서는 학습 모드와 시험 모드의 출제 범위로 저장됩니다. 선택이 없으면 전체 개념서를 사용합니다.",
+            font=("Malgun Gothic", 10),
+            fg=COLOR_DARK,
+            bg=COLOR_BG,
+            justify="left"
+        )
+        info.pack(anchor="w", pady=(0, 12))
+
+        list_frame = tk.Frame(body, bg=COLOR_CARD, bd=1, relief="solid")
+        list_frame.pack(fill="both", expand=True)
+
+        inner = tk.Frame(list_frame, bg=COLOR_CARD, padx=18, pady=14)
+        inner.pack(fill="both", expand=True)
+
+        concept_files = list_concept_files()
+        selected_set = set(self.selected_concepts)
+        vars_by_file = {}
+
+        if not concept_files:
+            tk.Label(inner, text="아직 개념서가 없습니다. 아래 버튼으로 .txt 파일을 추가하세요.", font=("Malgun Gothic", 11), fg=COLOR_TEXT_MUTED, bg=COLOR_CARD).pack(anchor="w", pady=12)
+        else:
+            for filename in concept_files:
+                display = filename.replace(".txt", "").replace("_", " ")
+                var = tk.BooleanVar(value=(filename in selected_set))
+                vars_by_file[filename] = var
+                cb = tk.Checkbutton(
+                    inner,
+                    text=display,
+                    variable=var,
+                    font=("Malgun Gothic", 11),
+                    bg=COLOR_CARD,
+                    activebackground=COLOR_CARD,
+                    fg=COLOR_DARK,
+                    selectcolor=COLOR_CARD,
+                    anchor="w"
+                )
+                cb.pack(fill="x", anchor="w", pady=3)
+
+        btn_row = tk.Frame(body, bg=COLOR_BG)
+        btn_row.pack(fill="x", pady=(14, 0))
+
+        def save_scope():
+            self.selected_concepts = [name for name, var in vars_by_file.items() if var.get()]
+            self.save_app_state()
+            messagebox.showinfo("저장 완료", self.get_active_scope_label())
+
+        def import_concept_file():
+            path = filedialog.askopenfilename(
+                title="추가할 개념서 선택",
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+            )
+            if not path:
+                return
+            dest = os.path.join(CONCEPTS_DIR, os.path.basename(path))
+            if os.path.exists(dest):
+                base, ext = os.path.splitext(os.path.basename(path))
+                dest = os.path.join(CONCEPTS_DIR, f"{base}_{datetime.datetime.now().strftime('%H%M%S')}{ext}")
+            shutil.copyfile(path, dest)
+            self.show_concept_manager()
+
+        def create_concept_file():
+            title = simpledialog.askstring("새 개념서", "개념서 제목을 입력하세요.")
+            if not title:
+                return
+            content = simpledialog.askstring("새 개념서", "개념 내용을 입력하세요.")
+            if content is None:
+                return
+            filename = safe_concept_filename(title)
+            filepath = os.path.join(CONCEPTS_DIR, filename)
+            if os.path.exists(filepath):
+                filename = safe_concept_filename(f"{title}_{datetime.datetime.now().strftime('%H%M%S')}")
+                filepath = os.path.join(CONCEPTS_DIR, filename)
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(content)
+            self.show_concept_manager()
+
+        def delete_selected_files():
+            targets = [name for name, var in vars_by_file.items() if var.get()]
+            if not targets:
+                messagebox.showwarning("주의", "삭제할 개념서를 체크하세요.")
+                return
+            if not messagebox.askyesno("삭제 확인", f"선택한 개념서 {len(targets)}개를 삭제할까요?"):
+                return
+            for name in targets:
+                path = os.path.join(CONCEPTS_DIR, name)
+                if os.path.exists(path):
+                    os.remove(path)
+            self.selected_concepts = [name for name in self.selected_concepts if name not in targets]
+            self.save_app_state()
+            self.show_concept_manager()
+
+        def edit_selected_file():
+            targets = [name for name, var in vars_by_file.items() if var.get()]
+            if len(targets) != 1:
+                messagebox.showwarning("주의", "수정할 개념서 하나만 체크하세요.")
+                return
+            self.show_concept_editor(targets[0])
+
+        create_flat_button(btn_row, "범위 저장", COLOR_SUCCESS, "#ffffff", "#38a169", save_scope).pack(side="left", ipadx=14, ipady=4)
+        create_flat_button(btn_row, "txt 파일 추가", COLOR_PRIMARY, "#ffffff", COLOR_PRIMARY_HOVER, import_concept_file).pack(side="left", padx=(8, 0), ipadx=14, ipady=4)
+        create_flat_button(btn_row, "새 개념서 작성", "#319795", "#ffffff", "#2c7a7b", create_concept_file).pack(side="left", padx=(8, 0), ipadx=14, ipady=4)
+        create_flat_button(btn_row, "선택 수정", "#805ad5", "#ffffff", "#6b46c1", edit_selected_file).pack(side="left", padx=(8, 0), ipadx=14, ipady=4)
+        create_flat_button(btn_row, "선택 삭제", COLOR_ERROR, "#ffffff", "#c53030", delete_selected_files).pack(side="left", padx=(8, 0), ipadx=14, ipady=4)
+        create_flat_button(btn_row, "메인 메뉴로", COLOR_DARK, "#ffffff", "#4a5568", self.show_main_menu).pack(side="right", ipadx=14, ipady=4)
+
+    def show_concept_editor(self, filename):
+        """개념서 제목과 본문을 수정하는 화면"""
+        self.init_container()
+        
+        old_path = os.path.join(CONCEPTS_DIR, filename)
+        try:
+            with open(old_path, "r", encoding="utf-8") as f:
+                old_content = f.read()
+        except Exception as e:
+            messagebox.showerror("오류", f"개념서를 읽을 수 없습니다.\n{e}")
+            self.show_concept_manager()
+            return
+        
+        header = tk.Frame(self.main_container, bg=COLOR_DARK)
+        header.pack(fill="x")
+        tk.Label(header, text="개념서 수정", font=("Malgun Gothic", 16, "bold"), fg="#ffffff", bg=COLOR_DARK).pack(pady=8)
+        
+        body = tk.Frame(self.main_container, bg=COLOR_BG)
+        body.pack(expand=True, fill="both", padx=36, pady=24)
+        
+        card = tk.Frame(body, bg=COLOR_CARD, bd=1, relief="solid", padx=22, pady=18)
+        card.pack(fill="both", expand=True)
+        
+        tk.Label(card, text="개념서 제목", font=("Malgun Gothic", 10, "bold"), fg=COLOR_DARK, bg=COLOR_CARD).pack(anchor="w")
+        title_var = tk.StringVar(value=filename.replace(".txt", "").replace("_", " "))
+        title_entry = tk.Entry(card, textvariable=title_var, font=("Malgun Gothic", 11), relief="solid", bd=1)
+        title_entry.pack(fill="x", pady=(6, 14))
+        
+        tk.Label(card, text="개념 내용", font=("Malgun Gothic", 10, "bold"), fg=COLOR_DARK, bg=COLOR_CARD).pack(anchor="w")
+        editor_frame = tk.Frame(card, bg=COLOR_CARD)
+        editor_frame.pack(fill="both", expand=True, pady=(6, 14))
+        
+        scrollbar = ttk.Scrollbar(editor_frame, orient="vertical")
+        text_area = tk.Text(editor_frame, wrap="word", font=("Malgun Gothic", 11), bg="#ffffff", fg=COLOR_DARK,
+                            relief="solid", bd=1, padx=10, pady=10, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=text_area.yview)
+        text_area.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        text_area.insert("1.0", old_content)
+        
+        btn_row = tk.Frame(card, bg=COLOR_CARD)
+        btn_row.pack(fill="x")
+        
+        def save_changes():
+            new_title = title_var.get().strip()
+            if not new_title:
+                messagebox.showwarning("주의", "개념서 제목을 입력하세요.")
+                return
+            
+            new_filename = safe_concept_filename(new_title)
+            new_path = os.path.join(CONCEPTS_DIR, new_filename)
+            if new_filename != filename and os.path.exists(new_path):
+                messagebox.showwarning("주의", "같은 이름의 개념서가 이미 있습니다. 다른 제목을 입력하세요.")
+                return
+            
+            content = text_area.get("1.0", tk.END).rstrip()
+            try:
+                with open(new_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                if new_filename != filename and os.path.exists(old_path):
+                    os.remove(old_path)
+                    self.selected_concepts = [new_filename if name == filename else name for name in self.selected_concepts]
+                    self.save_app_state()
+                messagebox.showinfo("저장 완료", "개념서가 수정되었습니다.")
+                self.show_concept_manager()
+            except Exception as e:
+                messagebox.showerror("오류", f"개념서를 저장할 수 없습니다.\n{e}")
+        
+        create_flat_button(btn_row, "저장", COLOR_SUCCESS, "#ffffff", "#38a169", save_changes).pack(side="right", ipadx=18, ipady=4)
+        create_flat_button(btn_row, "취소", COLOR_DARK, "#ffffff", "#4a5568", self.show_concept_manager).pack(side="right", padx=(0, 8), ipadx=18, ipady=4)
+
     def show_concept_selection(self):
         """개념 모드: 개념지 목록 선택 화면"""
         self.init_container()
@@ -1208,9 +1409,14 @@ JSON 하나만 출력하세요:
         content_frame.pack(fill="both", expand=True)
         
         # 문제 출력
-        lbl_q = tk.Label(content_frame, text=f"Q. {q_data['question']}", font=("Malgun Gothic", 13, "bold"), 
-                         fg=COLOR_DARK, bg=COLOR_CARD, justify="left", anchor="w", wraplength=700)
-        lbl_q.pack(fill="x", pady=(0, 20))
+        question_box = create_scrollable_question_box(
+            content_frame,
+            f"Q. {q_data['question']}",
+            font=("Malgun Gothic", 13, "bold"),
+            max_height=6,
+            width_chars=68
+        )
+        question_box.pack(fill="x", pady=(0, 20))
         
         # 피드백용 프레임 및 라벨 (처음엔 숨김)
         fb_frame = tk.Frame(content_frame, bg=COLOR_CARD)
@@ -1329,10 +1535,18 @@ JSON 하나만 출력하세요:
                            lambda: self.start_learning_session("subjective")).pack(fill="x")
         
         btn_back = create_flat_button(body, "⬅ 메인 메뉴로", COLOR_DARK, "#ffffff", "#4a5568", self.show_main_menu)
+        scope_row = tk.Frame(body, bg=COLOR_BG)
+        scope_row.pack(fill="x", pady=(22, 0))
+        tk.Label(scope_row, text=self.get_active_scope_label(), font=("Malgun Gothic", 10, "bold"), fg=COLOR_PRIMARY, bg=COLOR_BG).pack(side="left")
+        create_flat_button(scope_row, "출제 범위 관리", COLOR_PRIMARY, "#ffffff", COLOR_PRIMARY_HOVER, self.show_concept_manager, font=("Malgun Gothic", 9, "bold")).pack(side="right", ipadx=12, ipady=3)
         btn_back.pack(pady=40, ipadx=20, ipady=5)
 
     def start_learning_session(self, q_type):
         """학습 모드 세션 시작 (API 동적 생성)"""
+        if not self.get_active_concept_files():
+            messagebox.showwarning("개념서 없음", "학습 문제를 만들 개념서가 없습니다. 먼저 개념서를 추가하세요.")
+            self.show_concept_manager()
+            return
         self.current_mode = "learning"
         self.current_q_index = 0
         self.session_results = []
@@ -1366,9 +1580,14 @@ JSON 하나만 출력하세요:
         content_frame.pack(fill="both", expand=True)
         
         # 문제 출력
-        lbl_q = tk.Label(content_frame, text=f"Q. {q_data['question']}", font=("Malgun Gothic", 13, "bold"), 
-                         fg=COLOR_DARK, bg=COLOR_CARD, justify="left", anchor="w", wraplength=700)
-        lbl_q.pack(fill="x", pady=(0, 20))
+        question_box = create_scrollable_question_box(
+            content_frame,
+            f"Q. {q_data['question']}",
+            font=("Malgun Gothic", 13, "bold"),
+            max_height=6,
+            width_chars=68
+        )
+        question_box.pack(fill="x", pady=(0, 20))
         
         # 피드백 패널 (공통)
         fb_frame = tk.Frame(content_frame, bg=COLOR_CARD)
@@ -1432,9 +1651,10 @@ JSON 하나만 출력하세요:
                 
         else:
             # 주관식 코드 입력 렌더링
-            code_label = tk.Label(content_frame, text="파이썬 코드를 작성하세요 (결과가 에러 없이 작동해야 정답 판정):", 
+            answer_label = "텍스트 답안을 작성하세요:" if self.ex_mode else "파이썬 코드를 작성하세요 (결과가 에러 없이 작동해야 정답 판정):"
+            code_label = tk.Label(content_frame, text=answer_label, 
                                   font=("Malgun Gothic", 10, "bold"), fg=COLOR_DARK, bg=COLOR_CARD)
-            code_label.pack(anchor="w", pady=(0, 5))
+            code_label.pack(anchor="w", pady=(12, 6))
             
             # 에디터 프레임
             editor_frame = tk.Frame(content_frame, bg="#2d3748", bd=1, relief="solid")
@@ -1445,7 +1665,7 @@ JSON 하나만 출력하세요:
             text_area.pack(fill="both", expand=True)
             
             # 기본 템플릿 코드 삽입
-            text_area.insert(tk.END, "# 여기에 코드를 입력하세요\n")
+            text_area.insert(tk.END, "여기에 답안을 입력하세요\n" if self.ex_mode else "# 여기에 코드를 입력하세요\n")
             
             # 실행 결과 화면
             console_frame = tk.Frame(content_frame, bg="#1a202c", bd=1, relief="solid")
@@ -1454,17 +1674,28 @@ JSON 하나만 출력하세요:
             
             def run_code():
                 user_code = text_area.get("1.0", tk.END).strip()
-                if not user_code or user_code == "# 여기에 코드를 입력하세요":
-                    messagebox.showwarning("경고", "코드를 입력하세요.")
+                original_user_answer = user_code
+                if not user_code or user_code in ("여기에 답안을 입력하세요", "# 여기에 코드를 입력하세요", "# Write your Python code here"):
+                    messagebox.showwarning("경고", "답안을 입력하세요.")
                     return
                 
                 temp_file = None
                 stdout_str = ""
                 is_correct = False
+                if self.ex_mode:
+                    stdout_str = "EX 모드: 파이썬 실행 없이 텍스트 답안으로 채점합니다."
+                    is_correct = True
+                    console_frame.pack(fill="x", pady=(0, 10))
+                    console_lbl.config(text=stdout_str, fg="#48bb78")
+                else:
+                    pass
                 
                 try:
-                    with tempfile.NamedTemporaryFile("w", suffix=".py", encoding="utf-8", delete=False) as f:
-                        f.write(user_code)
+                    with tempfile.NamedTemporaryFile("w", suffix=".txt" if self.ex_mode else ".py", encoding="utf-8", delete=False) as f:
+                        if self.ex_mode:
+                            f.write('"""\\n' + original_user_answer.replace('"""', '\\"\\"\\"') + '\\n"""')
+                        else:
+                            f.write(user_code)
                         temp_file = f.name
                     
                     # 2초 타임아웃
@@ -1511,7 +1742,7 @@ JSON 하나만 출력하세요:
                     evaluation = self.evaluate_subjective_answer(
                         q_data["question"],
                         q_data.get("evaluation_criteria", ""),
-                        user_code,
+                        original_user_answer,
                         stdout_str,
                         is_correct
                     )
@@ -1528,7 +1759,7 @@ JSON 하나만 출력하세요:
                         save_result = {
                             "question": q_data.get("question"),
                             "type": "subjective",
-                            "user_code": user_code,
+                            "user_code": original_user_answer,
                             "stdout": stdout_str,
                             "is_correct": final_correct,
                             "applied_feedback": feedback
@@ -1554,7 +1785,8 @@ JSON 하나만 출력하세요:
                 
                 threading.Thread(target=fetch_feedback, daemon=True).start()
             
-            btn_run = create_flat_button(content_frame, "💻 코드 실행 및 채점하기", "#4a5568", "#ffffff", "#2d3748", 
+            run_label = "텍스트 답안 채점하기" if self.ex_mode else "💻 코드 실행 및 채점하기"
+            btn_run = create_flat_button(content_frame, run_label, "#4a5568", "#ffffff", "#2d3748", 
                                         run_code, font=("Malgun Gothic", 10, "bold"))
             btn_run.pack(anchor="e", pady=(0, 10))
 
@@ -1568,9 +1800,14 @@ JSON 하나만 출력하세요:
     
     def start_test_mode(self):
         """시험 모드 시작 (API 동적 생성)"""
+        if not self.get_active_concept_files():
+            messagebox.showwarning("개념서 없음", "시험 문제를 만들 개념서가 없습니다. 먼저 개념서를 추가하세요.")
+            self.show_concept_manager()
+            return
         self.current_mode = "test"
         self.session_results = []
         self.test_temp_answers = {}
+        self.test_answer_widgets = {}
         self.generate_ai_quizzes_async(mode="test")
 
     def show_test_paper(self):
@@ -1589,12 +1826,12 @@ JSON 하나만 출력하세요:
         sf = scroll_container.scrollable_frame
         
         # 상단 안내 문구
-        lbl_info = tk.Label(sf, text="각 문제를 풀고 우측 하단의 [임시 저장] 버튼을 눌러 답안을 저장하세요. 모두 작성 후 하단의 [최종 제출]을 누르면 채점이 시작됩니다.",
+        lbl_info = tk.Label(sf, text="각 문제를 풀고 우측 하단의 [임시 저장] 버튼을 누를 수 있습니다. 저장하지 않은 답안도 [최종 제출] 시 자동 저장 후 채점됩니다.",
                             font=("Malgun Gothic", 10, "bold"), fg=COLOR_PRIMARY, bg=COLOR_BG, justify="left", pady=10)
         lbl_info.pack(fill="x", padx=30, pady=(15, 5))
         
         # 문제 카드들 렌더링
-        question_cards = {}
+        self.test_answer_widgets = {}
         for idx, q_data in enumerate(self.current_session_quizzes):
             q_id = q_data["id"]
             q_type = q_data.get("type")
@@ -1611,8 +1848,14 @@ JSON 하나만 출력하세요:
                                  font=("Malgun Gothic", 11, "bold"), fg=COLOR_TEXT_MUTED, bg=COLOR_CARD)
             lbl_title.pack(anchor="w", pady=(0, 5))
             
-            lbl_question = tk.Label(pad_frame, text=q_data["question"], font=("Malgun Gothic", 12, "bold"), fg=COLOR_DARK, bg=COLOR_CARD, justify="left", anchor="w", wraplength=780)
-            lbl_question.pack(anchor="w", fill="x", pady=(0, 10))
+            question_box = create_scrollable_question_box(
+                pad_frame,
+                q_data["question"],
+                font=("Malgun Gothic", 12, "bold"),
+                max_height=5,
+                width_chars=78
+            )
+            question_box.pack(anchor="w", fill="x", pady=(0, 12))
             
             # 힌트 라벨 및 버튼 영역
             hint_lbl = tk.Label(pad_frame, text="", font=("Malgun Gothic", 10), fg=COLOR_TEXT_MUTED, bg=COLOR_CARD, justify="left")
@@ -1629,6 +1872,11 @@ JSON 하나만 출력하세요:
                 if self.test_temp_answers[q_id]["objective_ans"] is not None:
                     var.set(self.test_temp_answers[q_id]["objective_ans"])
                     status_lbl.config(text="임시 저장됨 ✓", fg=COLOR_SUCCESS)
+                self.test_answer_widgets[q_id] = {
+                    "type": "objective",
+                    "var": var,
+                    "status": status_lbl
+                }
                     
                 radio_buttons = []
                 for i, opt_text in enumerate(q_data.get("options", [])):
@@ -1654,7 +1902,7 @@ JSON 하나만 출력하세요:
             else:
                 # 주관식 코딩 에디터
                 editor_frame = tk.Frame(pad_frame, bg="#2d3748", bd=1, relief="solid")
-                editor_frame.pack(fill="x", pady=5)
+                editor_frame.pack(fill="x", pady=(12, 5))
                 
                 txt_area = tk.Text(editor_frame, height=5, font=("Consolas", 10), bg="#2d3748", fg="#f7fafc", 
                                    insertbackground="white", padx=8, pady=8, relief="flat")
@@ -1665,13 +1913,19 @@ JSON 하나만 출력하세요:
                     txt_area.insert(tk.END, self.test_temp_answers[q_id]["subjective_code"])
                     status_lbl.config(text="임시 저장됨 ✓", fg=COLOR_SUCCESS)
                 else:
-                    txt_area.insert(tk.END, "# 코드를 작성하세요\n")
+                    txt_area.insert(tk.END, "여기에 답안을 입력하세요\n" if self.ex_mode else "# 코드를 작성하세요\n")
+                self.test_answer_widgets[q_id] = {
+                    "type": "subjective",
+                    "text": txt_area,
+                    "status": status_lbl
+                }
                     
                 # 주관식용 저장 람다
                 def make_save_sub(qid=q_id, ta=txt_area, sl=status_lbl):
                     code = ta.get("1.0", tk.END).strip()
-                    if not code or code == "# 코드를 작성하세요":
-                        messagebox.showwarning("주의", "코드를 작성한 후 저장해주세요.")
+                    empty_markers = ("여기에 답안을 입력하세요", "# 코드를 작성하세요")
+                    if not code or code in empty_markers:
+                        messagebox.showwarning("주의", "답안을 작성한 후 저장해주세요.")
                         return
                     self.test_temp_answers[qid]["subjective_code"] = code
                     self.test_temp_answers[qid]["saved"] = True
@@ -1717,16 +1971,63 @@ JSON 하나만 출력하세요:
         btn_final_submit.pack(fill="x", ipady=5)
         scroll_container.bind_children_to_mousewheel()
 
+    def auto_save_unsaved_test_answers(self):
+        """최종 제출 직전에 임시 저장되지 않은 입력값만 화면에서 읽어 저장한다."""
+        auto_saved = []
+        still_unsaved = []
+        empty_markers = ("여기에 답안을 입력하세요", "# 코드를 작성하세요")
+        
+        for idx, q in enumerate(self.current_session_quizzes):
+            q_id = q["id"]
+            answer_state = self.test_temp_answers.get(q_id)
+            if not answer_state or answer_state.get("saved"):
+                continue
+            
+            widget_info = self.test_answer_widgets.get(q_id, {})
+            q_type = q.get("type")
+            
+            if q_type == "objective":
+                var = widget_info.get("var")
+                ans = var.get() if var else 0
+                if ans:
+                    answer_state["objective_ans"] = ans
+                    answer_state["saved"] = True
+                    status_lbl = widget_info.get("status")
+                    if status_lbl and status_lbl.winfo_exists():
+                        status_lbl.config(text="자동 저장됨 ✓", fg=COLOR_SUCCESS)
+                    auto_saved.append(idx + 1)
+                else:
+                    still_unsaved.append(idx + 1)
+            else:
+                text_widget = widget_info.get("text")
+                user_text = text_widget.get("1.0", tk.END).strip() if text_widget else ""
+                if user_text and user_text not in empty_markers:
+                    answer_state["subjective_code"] = user_text
+                    answer_state["saved"] = True
+                    status_lbl = widget_info.get("status")
+                    if status_lbl and status_lbl.winfo_exists():
+                        status_lbl.config(text="자동 저장됨 ✓", fg=COLOR_SUCCESS)
+                    auto_saved.append(idx + 1)
+                else:
+                    still_unsaved.append(idx + 1)
+        
+        return auto_saved, still_unsaved
+
     def submit_test_paper(self):
         """시험 최종 제출 처리 및 로딩 오버레이 채점 진행바 구동"""
-        # 저장되지 않은 문항 체크
-        unsaved = [i+1 for i, q in enumerate(self.current_session_quizzes) if not self.test_temp_answers[q["id"]]["saved"]]
-        if unsaved:
-            msg = f"아직 임시 저장하지 않은 문항이 있습니다: {unsaved}번\n그래도 최종 제출하시겠습니까?"
-            if not messagebox.askyesno("미저장 문항 존재", msg):
+        auto_saved, still_unsaved = self.auto_save_unsaved_test_answers()
+        
+        if still_unsaved:
+            msg = f"답안이 비어 있는 문항이 있습니다: {still_unsaved}번\n비어 있는 상태로 최종 제출하시겠습니까?"
+            if auto_saved:
+                msg = f"임시 저장하지 않은 답안 {auto_saved}번은 자동 저장했습니다.\n\n{msg}"
+            if not messagebox.askyesno("미작성 문항 존재", msg):
                 return
         else:
-            if not messagebox.askyesno("최종 제출", "정말로 최종 제출하시겠습니까?\n제출 후에는 답안을 수정할 수 없습니다."):
+            msg = "정말로 최종 제출하시겠습니까?\n제출 후에는 답안을 수정할 수 없습니다."
+            if auto_saved:
+                msg = f"임시 저장하지 않은 답안 {auto_saved}번은 자동 저장했습니다.\n\n{msg}"
+            if not messagebox.askyesno("최종 제출", msg):
                 return
 
         # 채점 프로그레스 오버레이 생성
@@ -1789,8 +2090,11 @@ JSON 하나만 출력하세요:
                         # 로컬 컴파일/실행
                         temp_file = None
                         try:
-                            with tempfile.NamedTemporaryFile("w", suffix=".py", encoding="utf-8", delete=False) as f:
-                                f.write(user_code)
+                            with tempfile.NamedTemporaryFile("w", suffix=".txt" if self.ex_mode else ".py", encoding="utf-8", delete=False) as f:
+                                if self.ex_mode:
+                                    f.write('"""\\n' + user_code.replace('"""', '\\"\\"\\"') + '\\n"""')
+                                else:
+                                    f.write(user_code)
                                 temp_file = f.name
                             # 2초 제한
                             res = subprocess.run([sys.executable, temp_file], capture_output=True, text=True, timeout=2.0)
@@ -1825,7 +2129,7 @@ JSON 하나만 출력하세요:
                         applied_feedback = evaluation["feedback"]
                     else:
                         is_correct = False
-                        applied_feedback = "제출된 코드가 없습니다."
+                        applied_feedback = "제출된 답안이 없습니다."
                 
                 results.append({
                     "id": q_id,
@@ -1962,8 +2266,15 @@ JSON 하나만 출력하세요:
             lbl_title.pack(anchor="w", pady=(0, 5))
             
             # 문제 내용
-            lbl_question = tk.Label(pad_frame, text=res["question"], font=("Malgun Gothic", 11, "bold"), fg=COLOR_DARK, bg=card_bg, justify="left", anchor="w", wraplength=780)
-            lbl_question.pack(anchor="w", fill="x", pady=(0, 10))
+            question_box = create_scrollable_question_box(
+                pad_frame,
+                res["question"],
+                bg=card_bg,
+                font=("Malgun Gothic", 11, "bold"),
+                max_height=5,
+                width_chars=78
+            )
+            question_box.pack(anchor="w", fill="x", pady=(0, 10))
             
             # 작성한 답안 표시 및 피드백 덮어쓰기
             if q_type == "objective":
@@ -2326,6 +2637,7 @@ JSON 하나만 출력하세요:
         else:
             # 시험 모드용 임시 저장 데이터 초기화
             self.test_temp_answers = {}
+            self.test_answer_widgets = {}
             for q in self.current_session_quizzes:
                 self.test_temp_answers[q["id"]] = {
                     "objective_ans": None,
