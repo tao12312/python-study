@@ -1,0 +1,24 @@
+[단원: 03. 함수와 클래스]
+
+코드의 재사용성을 극대화하기 위한 함수와 객체 지향 프로그래밍의 핵심인 클래스에 대해 학습합니다.
+
+1. 함수 (Function)
+함수는 특정 작업을 수행하는 코드의 묶음입니다. `def` 키워드를 사용하여 선언하고, 인자(Arguments)를 받거나 결과값(Return Value)을 반환할 수 있습니다.
+- 예시:
+  def add(a, b):
+      return a + b
+  result = add(3, 5) # result는 8
+
+2. 클래스 (Class)와 객체 (Object)
+클래스는 객체를 생성하기 위한 틀(설계도)이며, 객체는 클래스를 바탕으로 메모리에 실제로 구현된 실체입니다.
+- 생성자 (`__init__`): 객체가 생성될 때 자동으로 호출되며, 객체의 속성(Attribute)을 초기화합니다.
+- 메서드 (Method): 클래스 내부의 함수로, 객체의 행동을 정의합니다. 첫 번째 매개변수로 항상 `self`를 전달받아야 합니다.
+- 예시:
+  class Dog:
+      def __init__(self, name):
+          self.name = name
+      def bark(self):
+          return f"{self.name}가 멍멍 짖습니다."
+  
+  my_dog = Dog("초코")
+  print(my_dog.bark()) # "초코가 멍멍 짖습니다." 출력
