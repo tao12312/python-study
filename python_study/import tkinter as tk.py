@@ -72,18 +72,23 @@ REQUIRED_PROMPT_CONFIG = {
     "ex_feedback_prompt": ""
 }
 
-# 테마 컬러 정의 (Modern Light Slate Theme)
-COLOR_BG = "#edf2f7"          # 전체 배경색 (연한 회색)
+# 테마 컬러 정의 (Modern White Mode Theme)
+COLOR_BG = "#ffffff"          # 전체 배경색 (순수 흰색)
 COLOR_CARD = "#ffffff"        # 카드/컨테이너 배경색 (흰색)
-COLOR_PRIMARY = "#3182ce"     # 주조색 (블루)
-COLOR_PRIMARY_HOVER = "#2b6cb0" # 블루 호버
-COLOR_DARK = "#2d3748"        # 어두운 색 (텍스트 및 헤더)
-COLOR_TEXT_MUTED = "#718096"  # 연한 텍스트 (그레이)
-COLOR_SUCCESS = "#48bb78"     # 성공/정답 (그린)
-COLOR_SUCCESS_LIGHT = "#f0fff4"# 연한 그린 (배경용)
-COLOR_ERROR = "#f56565"       # 실패/오답 (레드)
-COLOR_ERROR_LIGHT = "#fff5f5"  # 연한 레드 (배경용)
-COLOR_BORDER = "#e2e8f0"      # 보더/구분선
+COLOR_HEADER = "#1f2937"      # 헤더 배경색 (진한 그레이)
+COLOR_NAV_BG = "#ffffff"      # 네비게이션 바 배경
+COLOR_NAV_BORDER = "#e5e7eb"  # 네비게이션 보더
+COLOR_PRIMARY = "#3b82f6"     # 주조색 (파랑)
+COLOR_PRIMARY_HOVER = "#2563eb" # 파랑 호버
+COLOR_DARK = "#1f2937"        # 어두운 색 (텍스트 및 헤더)
+COLOR_TEXT = "#111827"        # 주 텍스트
+COLOR_TEXT_MUTED = "#6b7280"  # 연한 텍스트 (그레이)
+COLOR_SUCCESS = "#10b981"     # 성공/정답 (초록)
+COLOR_SUCCESS_LIGHT = "#ecfdf5"# 연한 초록 (배경용)
+COLOR_ERROR = "#ef4444"       # 실패/오답 (빨강)
+COLOR_ERROR_LIGHT = "#fef2f2"  # 연한 빨강 (배경용)
+COLOR_BORDER = "#e5e7eb"      # 보더/구분선
+COLOR_BUTTON_BG = "#f3f4f6"   # 버튼 배경 (밝은 회색)
 
 def list_concept_files():
     try:
@@ -473,13 +478,202 @@ class ScrollableFrame(tk.Frame):
         return "break"
 
 # ==========================================
+# 2-1. 네비게이션 바 컴포넌트
+# ==========================================
+class NavigationBar(tk.Frame):
+    """상단에 고정되는 네비게이션 바"""
+    def __init__(self, parent, app_ref, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+        self.app = app_ref
+        self.config(bg=COLOR_NAV_BG, height=50)
+        
+        # 구분선 (보더)
+        border = tk.Frame(self, bg=COLOR_NAV_BORDER, height=1)
+        border.pack(fill="x", side="bottom")
+        
+        # 네비게이션 콘텐츠
+        nav_content = tk.Frame(self, bg=COLOR_NAV_BG)
+        nav_content.pack(fill="x", padx=15, pady=8)
+        
+        # 좌측: 메뉴 + 홈 + 이전 버튼
+        left_frame = tk.Frame(nav_content, bg=COLOR_NAV_BG)
+        left_frame.pack(side="left", fill="x", expand=False)
+        
+        self.menu_btn = create_flat_button(
+            left_frame, "☰ 목록", COLOR_BUTTON_BG, COLOR_DARK, COLOR_BORDER,
+            lambda: self.app.toggle_sidebar(),
+            font=("Malgun Gothic", 9, "bold")
+        )
+        self.menu_btn.pack(side="left", padx=2, ipady=4, ipadx=8)
+        
+        create_flat_button(
+            left_frame, "🏠 홈", COLOR_BUTTON_BG, COLOR_DARK, COLOR_BORDER,
+            self.app.show_main_menu,
+            font=("Malgun Gothic", 9, "bold")
+        ).pack(side="left", padx=2, ipady=4, ipadx=8)
+        
+        self.back_btn = create_flat_button(
+            left_frame, "⬅ 이전", COLOR_BUTTON_BG, COLOR_DARK, COLOR_BORDER,
+            self.app.go_back,
+            font=("Malgun Gothic", 9, "bold")
+        )
+        self.back_btn.pack(side="left", padx=2, ipady=4, ipadx=8)
+        
+        # 우측: 정보 + 종료 버튼
+        right_frame = tk.Frame(nav_content, bg=COLOR_NAV_BG)
+        right_frame.pack(side="right", fill="x", expand=False)
+        
+        self.info_label = tk.Label(right_frame, text="", font=("Malgun Gothic", 9), 
+                                   fg=COLOR_TEXT_MUTED, bg=COLOR_NAV_BG)
+        self.info_label.pack(side="left", padx=10)
+        
+        create_flat_button(
+            right_frame, "❌ 종료", "#fecaca", "#dc2626", "#fca5a5",
+            self.app.quit,
+            font=("Malgun Gothic", 9, "bold")
+        ).pack(side="right", padx=2, ipady=4, ipadx=8)
+        
+    def update_info(self, text):
+        """정보 라벨 업데이트"""
+        self.info_label.config(text=text)
+
+# ==========================================
+# 2-2. 사이드 패널 (목록)
+# ==========================================
+class SidebarPanel(tk.Frame):
+    """좌측 사이드 패널 (섹션 기반 메뉴)"""
+    def __init__(self, parent, app_ref, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+        self.app = app_ref
+        self.config(bg=COLOR_CARD, width=250)
+        
+        # 패널 헤더
+        header = tk.Frame(self, bg=COLOR_HEADER)
+        header.pack(fill="x", padx=0, pady=0)
+        
+        title = tk.Label(header, text="🐍 학습 내용", font=("Malgun Gothic", 12, "bold"),
+                        fg="#ffffff", bg=COLOR_HEADER)
+        title.pack(padx=15, pady=10)
+        
+        # 스크롤 프레임
+        canvas_frame = tk.Frame(self, bg=COLOR_CARD)
+        canvas_frame.pack(fill="both", expand=True, padx=0, pady=0)
+        
+        scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical")
+        self.canvas = tk.Canvas(canvas_frame, bg=COLOR_CARD, highlightthickness=0, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.canvas.yview)
+        
+        self.scroll_frame = tk.Frame(self.canvas, bg=COLOR_CARD)
+        self.canvas.create_window((0, 0), window=self.scroll_frame, anchor="nw")
+        self.scroll_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        
+        self.canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # 마우스 휠 스크롤
+        def _on_mousewheel(event):
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        self.canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # 섹션 1: 개념모드
+        self._create_section("📚 개념모드", "concept")
+        
+        # 섹션 2: 학습모드
+        self._create_learning_section()
+        
+        # 섹션 3: 시험모드
+        self._create_section("✏️ 시험모드", "test")
+        
+        # 섹션 4: 기록실
+        self._create_section("📊 기록실", "library")
+    
+    def _create_section(self, title, mode):
+        """메뉴 섹션 생성"""
+        section_frame = tk.Frame(self.scroll_frame, bg=COLOR_CARD)
+        section_frame.pack(fill="x", padx=10, pady=(10, 0))
+        
+        # 섹션 제목
+        title_label = tk.Label(section_frame, text=title, font=("Malgun Gothic", 10, "bold"),
+                               fg=COLOR_PRIMARY, bg=COLOR_CARD)
+        title_label.pack(anchor="w", pady=(0, 5))
+        
+        if mode == "concept":
+            # 개념 목록
+            concepts = list_concept_files()
+            for idx, concept in enumerate(concepts):
+                label = concept.replace(".txt", "").replace("_", " ")
+                btn_text = f"• {label}"
+                btn = create_flat_button(section_frame, btn_text, COLOR_BUTTON_BG, COLOR_DARK, "#e5e7eb",
+                                        lambda c=concept: self._on_concept_click(c),
+                                        font=("Malgun Gothic", 9))
+                btn.pack(fill="x", pady=2)
+        
+        elif mode == "test":
+            btn = create_flat_button(section_frame, "⏱️ 시험 시작", COLOR_ERROR, "#ffffff", "#dc2626",
+                                    lambda: self._navigate_to("test"),
+                                    font=("Malgun Gothic", 9, "bold"))
+            btn.pack(fill="x", pady=2)
+        
+        elif mode == "library":
+            btn = create_flat_button(section_frame, "📈 성적 조회", COLOR_SUCCESS, "#ffffff", "#059669",
+                                    lambda: self._navigate_to("library"),
+                                    font=("Malgun Gothic", 9, "bold"))
+            btn.pack(fill="x", pady=2)
+    
+    def _create_learning_section(self):
+        """학습모드 섹션 (객관식/주관식)"""
+        section_frame = tk.Frame(self.scroll_frame, bg=COLOR_CARD)
+        section_frame.pack(fill="x", padx=10, pady=(10, 0))
+        
+        title_label = tk.Label(section_frame, text="⚡ 학습모드", font=("Malgun Gothic", 10, "bold"),
+                               fg=COLOR_PRIMARY, bg=COLOR_CARD)
+        title_label.pack(anchor="w", pady=(0, 5))
+        
+        btn_obj = create_flat_button(section_frame, "📝 객관식 학습", COLOR_PRIMARY, "#ffffff", COLOR_PRIMARY_HOVER,
+                                     lambda: self._navigate_to("learning_obj"),
+                                     font=("Malgun Gothic", 9))
+        btn_obj.pack(fill="x", pady=2)
+        
+        btn_sub = create_flat_button(section_frame, "💻 주관식 학습", "#319795", "#ffffff", "#2c7a7b",
+                                     lambda: self._navigate_to("learning_sub"),
+                                     font=("Malgun Gothic", 9))
+        btn_sub.pack(fill="x", pady=2)
+    
+    def _on_concept_click(self, filename):
+        """개념 클릭"""
+        self.app.show_concept_content(filename)
+        self.app.toggle_sidebar(False)  # 사이드바 자동 닫기
+    
+    def _navigate_to(self, mode):
+        """네비게이션"""
+        if mode == "test":
+            self.app.start_test_mode()
+        elif mode == "library":
+            self.app.show_library()
+        elif mode == "learning_obj":
+            self.app.start_learning_session("objective")
+        elif mode == "learning_sub":
+            self.app.start_learning_session("subjective")
+        self.app.toggle_sidebar(False)  # 사이드바 자동 닫기
+    
+    def _on_concept_select(self, event):
+        """개념 더블클릭 시"""
+        selection = self.concept_listbox.curselection()
+        if selection:
+            idx = selection[0]
+            concepts = list_concept_files()
+            if 0 <= idx < len(concepts):
+                # 개념 뷰 화면으로
+                self.app.show_concept_content(concepts[idx])
+
+# ==========================================
 # 3. 메인 애플리케이션 클래스
 # ==========================================
 class PythonTutorApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Python Tutor - Prototype v0.1")
-        self.geometry("900x700")
+        self.title("Python Learning Program")
+        self.geometry("1100x750")
         self.configure(bg=COLOR_BG)
         
         # 상태 변수 (State)
@@ -490,6 +684,14 @@ class PythonTutorApp(tk.Tk):
         self.selected_concepts = []
         self.ex_mode = False
         
+        # 네비게이션 상태
+        self.navigation_stack = []   # 뒤로가기 스택
+        self.sidebar_visible = False # 사이드바 표시 여부
+        
+        # 시험 모드용 타이머
+        self.test_timer_id = None
+        self.test_remaining_time = 0
+        
         # 시험 모드용 임시 저장 변수
         # 구조: { quiz_id: { "objective_ans": int, "subjective_code": str, "saved": bool } }
         self.test_temp_answers = {}
@@ -497,12 +699,15 @@ class PythonTutorApp(tk.Tk):
         
         # UI 프레임 참조 변수
         self.main_container = None
+        self.navigation_bar = None
+        self.sidebar_panel = None
         
         # 초기화 및 메뉴 렌더링
         ensure_environment()
         self.load_config()
         self.ensure_config_defaults()
         self.load_app_state()
+        self.setup_ui_layout()
         self.show_main_menu()
 
     def load_config(self):
@@ -557,6 +762,61 @@ class PythonTutorApp(tk.Tk):
         if len(active) == len(list_concept_files()):
             return f"출제 범위: 전체 개념서 {len(active)}개"
         return f"출제 범위: 선택 개념서 {len(active)}개"
+
+    # ==========================================
+    # 네비게이션 및 UI 관리 메서드
+    # ==========================================
+    def setup_ui_layout(self):
+        """전체 UI 레이아웃 설정 (네비게이션 바, 사이드바, 컨테이너)"""
+        # 최상단 네비게이션 바
+        self.navigation_bar = NavigationBar(self, self)
+        self.navigation_bar.pack(fill="x", side="top")
+        
+        # 메인 콘텐츠 영역 (네비게이션 바 제외)
+        content_frame = tk.Frame(self, bg=COLOR_BG)
+        content_frame.pack(fill="both", expand=True, side="bottom")
+        
+        # 메인 컨테이너 (사이드바 토글 시 좌측에 배치)
+        self.main_container = tk.Frame(content_frame, bg=COLOR_BG)
+        self.main_container.pack(fill="both", expand=True, side="left")
+    
+    def toggle_sidebar(self, force_state=None):
+        """사이드바 표시/숨김
+        Args:
+            force_state: None (토글), True (표시), False (숨김)
+        """
+        if force_state is None:
+            # 토글
+            state = not self.sidebar_visible
+        else:
+            # 강제 설정
+            state = force_state
+        
+        if state:
+            # 사이드바 표시
+            parent = self.main_container.master
+            if not self.sidebar_panel:
+                self.sidebar_panel = SidebarPanel(parent, self, bg=COLOR_CARD)
+            if not self.sidebar_visible:
+                self.sidebar_panel.pack(fill="y", side="left", before=self.main_container)
+            self.sidebar_visible = True
+        else:
+            # 사이드바 숨기기
+            if self.sidebar_panel:
+                self.sidebar_panel.pack_forget()
+            self.sidebar_visible = False
+    
+    def go_back(self):
+        """이전 화면으로 돌아가기"""
+        if len(self.navigation_stack) > 0:
+            prev_screen = self.navigation_stack.pop()
+            prev_screen()
+        else:
+            self.show_main_menu()
+    
+    def push_navigation(self, screen_func):
+        """현재 화면을 스택에 저장"""
+        self.navigation_stack.append(screen_func)
 
     def ensure_config_defaults(self):
         """prompts.json에 필요한 키 구조만 보장합니다."""
@@ -970,12 +1230,9 @@ class PythonTutorApp(tk.Tk):
             }
 
     def init_container(self):
-        """메인 윈도우 내부의 컨테이너를 새로 만듭니다."""
-        if self.main_container:
-            self.main_container.destroy()
-        
-        self.main_container = tk.Frame(self, bg=COLOR_BG)
-        self.main_container.pack(fill="both", expand=True)
+        """메인 컨테이너의 모든 자식 요소를 제거합니다."""
+        for child in self.main_container.winfo_children():
+            child.destroy()
 
     # ==========================================
     # 4. 화면 구현 (Views)
@@ -984,96 +1241,126 @@ class PythonTutorApp(tk.Tk):
     def show_main_menu(self):
         """메인 메뉴 화면 (4개의 모드 카드 제공)"""
         self.init_container()
+        self.navigation_stack.clear()
+        
+        # 네비게이션 바 정보 업데이트
+        self.navigation_bar.update_info("홈 화면")
         
         # 타이틀 영역
-        header_frame = tk.Frame(self.main_container, bg=COLOR_DARK)
-        header_frame.pack(fill="x", pady=(20, 0))
+        header_frame = tk.Frame(self.main_container, bg="#f9fafb")
+        header_frame.pack(fill="x", padx=0, pady=0)
         
-        lbl_title = tk.Label(header_frame, text="🐍 Python Learning Program", font=("Malgun Gothic", 20, "bold"), fg="#ffffff", bg=COLOR_DARK)
-        lbl_title.pack(pady=10)
-        lbl_subtitle = tk.Label(header_frame, text="AI 튜터 기반의 개인화된 파이썬 학습 환경", font=("Malgun Gothic", 11), fg="#a0aec0", bg=COLOR_DARK)
-        lbl_subtitle.pack()
-        top_tools = tk.Frame(header_frame, bg=COLOR_DARK)
-        top_tools.pack(fill="x", padx=16, pady=(4, 10))
-        ex_text = "EX 모드: 켜짐" if self.ex_mode else "EX 모드: 꺼짐"
+        title_pad = tk.Frame(header_frame, bg="#f9fafb", padx=30, pady=25)
+        title_pad.pack(fill="x")
+        
+        lbl_title = tk.Label(title_pad, text="🐍 Python Learning Program", font=("Malgun Gothic", 24, "bold"), fg=COLOR_DARK, bg="#f9fafb")
+        lbl_title.pack(anchor="w")
+        
+        lbl_subtitle = tk.Label(title_pad, text="AI 튜터 기반의 개인화된 파이썬 학습 환경", font=("Malgun Gothic", 12), fg=COLOR_TEXT_MUTED, bg="#f9fafb")
+        lbl_subtitle.pack(anchor="w", pady=(5, 0))
+        
+        # 도구 버튼 (EX 모드, 개념서 관리)
+        tools_frame = tk.Frame(title_pad, bg="#f9fafb")
+        tools_frame.pack(fill="x", pady=(15, 0))
+        
+        ex_text = "🟢 EX 모드: ON" if self.ex_mode else "⚪ EX 모드: OFF"
         create_flat_button(
-            top_tools,
+            tools_frame,
             ex_text,
-            COLOR_SUCCESS if self.ex_mode else "#4a5568",
-            "#ffffff",
-            "#38a169" if self.ex_mode else COLOR_DARK,
+            COLOR_BUTTON_BG,
+            COLOR_DARK,
+            "#e5e7eb",
             self.toggle_ex_mode,
             font=("Malgun Gothic", 9, "bold")
-        ).pack(side="left", ipadx=12, ipady=3)
+        ).pack(side="left", ipadx=10, ipady=4, padx=3)
+        
         create_flat_button(
-            top_tools,
-            "개념서/범위 관리",
-            COLOR_PRIMARY,
-            "#ffffff",
-            COLOR_PRIMARY_HOVER,
+            tools_frame,
+            "⚙️ 개념서/범위 관리",
+            COLOR_BUTTON_BG,
+            COLOR_DARK,
+            "#e5e7eb",
             self.show_concept_manager,
             font=("Malgun Gothic", 9, "bold")
-        ).pack(side="right", ipadx=12, ipady=3)
+        ).pack(side="left", ipadx=10, ipady=4, padx=3)
         
         # 카드 프레임 레이아웃
-        cards_frame = tk.Frame(self.main_container, bg=COLOR_BG)
-        cards_frame.pack(expand=True, fill="both", padx=50, pady=40)
+        cards_container = tk.Frame(self.main_container, bg=COLOR_BG)
+        cards_container.pack(expand=True, fill="both", padx=40, pady=40)
         
         # 2x2 그리드 설정
-        cards_frame.grid_columnconfigure(0, weight=1, uniform="group1")
-        cards_frame.grid_columnconfigure(1, weight=1, uniform="group1")
-        cards_frame.grid_rowconfigure(0, weight=1, uniform="group2")
-        cards_frame.grid_rowconfigure(1, weight=1, uniform="group2")
+        cards_container.grid_columnconfigure(0, weight=1)
+        cards_container.grid_columnconfigure(1, weight=1)
+        cards_container.grid_rowconfigure(0, weight=1)
+        cards_container.grid_rowconfigure(1, weight=1)
         
-        # 각 카드 내용 선언
+        # 각 카드 데이터
         modes = [
             {
                 "title": "📚 개념 모드",
-                "desc": "단원별 개념 정리 노트를 읽고\n이해도를 검증하는 객관식 5문항을 풉니다.",
-                "color": "#3182ce", "hover": "#2b6cb0",
+                "desc": "단원별 개념을 읽고\n이해도를 검증하는 객관식 5문제 풀이",
+                "color": COLOR_PRIMARY,
+                "hover": COLOR_PRIMARY_HOVER,
                 "cmd": self.show_concept_selection
             },
             {
                 "title": "⚡ 학습 모드",
-                "desc": "객관식 또는 주관식 유형을 직접 선택하여\n1문제씩 즉시 피드백을 받으며 정밀 학습합니다.",
-                "color": "#319795", "hover": "#2c7a7b",
+                "desc": "객관식 또는 주관식을 선택하여\n1문제씩 즉시 피드백을 받으며 학습",
+                "color": "#10b981",
+                "hover": "#059669",
                 "cmd": self.show_learning_selection
             },
             {
                 "title": "📝 시험 모드",
-                "desc": "혼합 구성된 10문항을 스크롤식 시험지로 풀고,\n답안 임시 저장 후 최종 제출하여 종합 평가를 받습니다.",
-                "color": "#805ad5", "hover": "#6b46c1",
-                "cmd": self.start_test_mode
+                "desc": "10문제를 시험지로 풀고\n답안 제출 후 종합 평가 받기",
+                "color": "#8b5cf6",
+                "hover": "#7c3aed",
+                "cmd": lambda: self.start_test_mode()
             },
             {
-                "title": "🗂️ 기록실 (Library)",
-                "desc": "이전에 풀었던 모든 모드의 세션 기록과 채점 결과를\n불러와 다시 확인하거나 같은 문제로 다시 도전합니다.",
-                "color": "#4a5568", "hover": "#343a40",
+                "title": "🗂️ 기록실",
+                "desc": "이전 풀이 기록과 채점 결과\n확인 및 재도전하기",
+                "color": "#f59e0b",
+                "hover": "#d97706",
                 "cmd": self.show_library
             }
         ]
         
         for idx, mode in enumerate(modes):
-            r = idx // 2
-            c = idx % 2
+            row = idx // 2
+            col = idx % 2
             
-            # 카드 프레임
-            card = tk.Frame(cards_frame, bg=COLOR_CARD, bd=1, relief="solid", highlightthickness=0, highlightbackground=COLOR_BORDER)
-            card.grid(row=r, column=c, padx=15, pady=15, sticky="nsew")
+            # 카드 프레임 (박스 섀도우 효과)
+            card = tk.Frame(cards_container, bg=COLOR_CARD)
+            card.grid(row=row, column=col, padx=12, pady=12, sticky="nsew")
             
-            # 패딩 프레임
-            padding_frame = tk.Frame(card, bg=COLOR_CARD, padx=25, pady=25)
-            padding_frame.pack(fill="both", expand=True)
+            # 왼쪽 컬러 바
+            color_bar = tk.Frame(card, bg=mode["color"], width=5)
+            color_bar.pack(side="left", fill="y", padx=0, pady=0)
             
-            lbl_m_title = tk.Label(padding_frame, text=mode["title"], font=("Malgun Gothic", 14, "bold"), fg=COLOR_DARK, bg=COLOR_CARD)
-            lbl_m_title.pack(anchor="w", pady=(0, 10))
+            # 우측 콘텐츠
+            content = tk.Frame(card, bg=COLOR_CARD, padx=20, pady=20)
+            content.pack(fill="both", expand=True, side="right")
             
-            lbl_m_desc = tk.Label(padding_frame, text=mode["desc"], font=("Malgun Gothic", 10), fg=COLOR_TEXT_MUTED, bg=COLOR_CARD, justify="left")
-            lbl_m_desc.pack(anchor="w", pady=(0, 20))
+            # 타이틀
+            tk.Label(content, text=mode["title"], font=("Malgun Gothic", 13, "bold"), fg=COLOR_DARK, bg=COLOR_CARD).pack(anchor="w")
             
-            # 진입 버튼
-            btn = create_flat_button(padding_frame, "입장하기 ➔", mode["color"], "#ffffff", mode["hover"], mode["cmd"], font=("Malgun Gothic", 10, "bold"))
-            btn.pack(fill="x", side="bottom")
+            # 설명
+            tk.Label(content, text=mode["desc"], font=("Malgun Gothic", 10), fg=COLOR_TEXT_MUTED, bg=COLOR_CARD, justify="left").pack(anchor="w", pady=(6, 12))
+            
+            # 버튼
+            btn_frame = tk.Frame(content, bg=COLOR_CARD)
+            btn_frame.pack(fill="x")
+            
+            create_flat_button(
+                btn_frame,
+                "입장 →",
+                mode["color"],
+                "#ffffff",
+                mode["hover"],
+                mode["cmd"],
+                font=("Malgun Gothic", 10, "bold")
+            ).pack(ipadx=12, ipady=5)
 
     # ------------------------------------------
     # 4-1. 개념 모드 관련 화면
@@ -1275,18 +1562,26 @@ class PythonTutorApp(tk.Tk):
     def show_concept_selection(self):
         """개념 모드: 개념지 목록 선택 화면"""
         self.init_container()
+        self.navigation_bar.update_info("개념 모드 - 단원 선택")
         
         # 헤더
-        header = tk.Frame(self.main_container, bg=COLOR_DARK)
-        header.pack(fill="x")
-        tk.Label(header, text="📚 개념 모드 - 단원 선택", font=("Malgun Gothic", 16, "bold"), fg="#ffffff", bg=COLOR_DARK).pack()
+        header = tk.Frame(self.main_container, bg="#f9fafb")
+        header.pack(fill="x", padx=0, pady=0)
+        
+        header_content = tk.Frame(header, bg="#f9fafb", padx=30, pady=20)
+        header_content.pack(fill="x")
+        
+        tk.Label(header_content, text="📚 개념 모드", font=("Malgun Gothic", 18, "bold"), 
+                fg=COLOR_DARK, bg="#f9fafb").pack(anchor="w")
+        tk.Label(header_content, text="공부하고 싶은 단원을 선택하세요", font=("Malgun Gothic", 11), 
+                fg=COLOR_TEXT_MUTED, bg="#f9fafb").pack(anchor="w", pady=(3, 0))
+        
+        # 구분선
+        sep = tk.Frame(header, bg=COLOR_BORDER, height=1)
+        sep.pack(fill="x")
         
         body = tk.Frame(self.main_container, bg=COLOR_BG)
-        body.pack(expand=True, fill="both", padx=50, pady=30)
-        
-        # 가이드 텍스트
-        tk.Label(body, text="공부하고 싶은 단원을 선택하세요. 개념지를 읽은 후, 관련 테스트 5문제가 출제됩니다.", 
-                 font=("Malgun Gothic", 11), fg=COLOR_DARK, bg=COLOR_BG).pack(pady=(0, 20))
+        body.pack(expand=True, fill="both", padx=40, pady=30)
         
         # 개념 파일 목록 확인
         files_frame = tk.Frame(body, bg=COLOR_BG)
@@ -1494,16 +1789,25 @@ class PythonTutorApp(tk.Tk):
     def show_learning_selection(self):
         """학습 모드 진입 전 객관식 vs 주관식 유형 선택"""
         self.init_container()
+        self.navigation_bar.update_info("학습 모드 - 유형 선택")
         
-        header = tk.Frame(self.main_container, bg=COLOR_DARK)
-        header.pack(fill="x")
-        tk.Label(header, text="⚡ 학습 모드 - 유형 선택", font=("Malgun Gothic", 16, "bold"), fg="#ffffff", bg=COLOR_DARK).pack()
+        header = tk.Frame(self.main_container, bg="#f9fafb")
+        header.pack(fill="x", padx=0, pady=0)
+        
+        header_content = tk.Frame(header, bg="#f9fafb", padx=30, pady=20)
+        header_content.pack(fill="x")
+        
+        tk.Label(header_content, text="⚡ 학습 모드", font=("Malgun Gothic", 18, "bold"), 
+                fg=COLOR_DARK, bg="#f9fafb").pack(anchor="w")
+        tk.Label(header_content, text="원하는 문항 형태를 선택하세요", font=("Malgun Gothic", 11), 
+                fg=COLOR_TEXT_MUTED, bg="#f9fafb").pack(anchor="w", pady=(3, 0))
+        
+        # 구분선
+        sep = tk.Frame(header, bg=COLOR_BORDER, height=1)
+        sep.pack(fill="x")
         
         body = tk.Frame(self.main_container, bg=COLOR_BG)
-        body.pack(expand=True, fill="both", padx=50, pady=40)
-        
-        tk.Label(body, text="원하는 문항 형태를 선택하세요. 유형별로 1문제씩 풀며 상세한 피드백을 받습니다.", 
-                 font=("Malgun Gothic", 11), fg=COLOR_DARK, bg=COLOR_BG).pack(pady=(0, 30))
+        body.pack(expand=True, fill="both", padx=40, pady=40)
         
         cards_frame = tk.Frame(body, bg=COLOR_BG)
         cards_frame.pack(fill="x")
@@ -1511,28 +1815,36 @@ class PythonTutorApp(tk.Tk):
         cards_frame.grid_columnconfigure(1, weight=1)
         
         # 객관식 카드
-        card_obj = tk.Frame(cards_frame, bg=COLOR_CARD, bd=1, relief="solid", highlightthickness=0, highlightbackground=COLOR_BORDER)
-        card_obj.grid(row=0, column=0, padx=15, pady=10, sticky="nsew")
-        card_obj_pad = tk.Frame(card_obj, bg=COLOR_CARD, padx=25, pady=25)
+        card_obj = tk.Frame(cards_frame, bg=COLOR_CARD)
+        card_obj.grid(row=0, column=0, padx=12, pady=10, sticky="nsew")
+        
+        color_bar_obj = tk.Frame(card_obj, bg=COLOR_PRIMARY, height=3)
+        color_bar_obj.pack(fill="x")
+        
+        card_obj_pad = tk.Frame(card_obj, bg=COLOR_CARD, padx=20, pady=20)
         card_obj_pad.pack(fill="both", expand=True)
         
-        tk.Label(card_obj_pad, text="📝 객관식 학습", font=("Malgun Gothic", 13, "bold"), fg=COLOR_DARK, bg=COLOR_CARD).pack(anchor="w", pady=(0, 10))
-        tk.Label(card_obj_pad, text="5지선다 객관식 문항만을 선별하여\n풀고, 오답 시 문항별 튜터 분석 피드백을 확인합니다.", 
-                 font=("Malgun Gothic", 10), fg=COLOR_TEXT_MUTED, bg=COLOR_CARD, justify="left").pack(anchor="w", pady=(0, 20))
-        create_flat_button(card_obj_pad, "객관식 시작 ➔", COLOR_PRIMARY, "#ffffff", COLOR_PRIMARY_HOVER, 
-                           lambda: self.start_learning_session("objective")).pack(fill="x")
+        tk.Label(card_obj_pad, text="📝 객관식 학습", font=("Malgun Gothic", 13, "bold"), fg=COLOR_DARK, bg=COLOR_CARD).pack(anchor="w", pady=(0, 15))
+        tk.Label(card_obj_pad, text="5지선다 문항으로\n1문제씩 즉시 피드백을 받으며\n학습을 진행할 수 있습니다.", 
+                 font=("Malgun Gothic", 10), fg=COLOR_TEXT_MUTED, bg=COLOR_CARD, justify="left").pack(anchor="w", pady=(0, 25), expand=True)
+        create_flat_button(card_obj_pad, "객관식 시작 →", COLOR_PRIMARY, "#ffffff", COLOR_PRIMARY_HOVER, 
+                           lambda: self.start_learning_session("objective")).pack(fill="x", ipady=6)
         
         # 주관식 카드
-        card_sub = tk.Frame(cards_frame, bg=COLOR_CARD, bd=1, relief="solid", highlightthickness=0, highlightbackground=COLOR_BORDER)
-        card_sub.grid(row=0, column=1, padx=15, pady=10, sticky="nsew")
-        card_sub_pad = tk.Frame(card_sub, bg=COLOR_CARD, padx=25, pady=25)
+        card_sub = tk.Frame(cards_frame, bg=COLOR_CARD)
+        card_sub.grid(row=0, column=1, padx=12, pady=10, sticky="nsew")
+        
+        color_bar_sub = tk.Frame(card_sub, bg="#10b981", height=3)
+        color_bar_sub.pack(fill="x")
+        
+        card_sub_pad = tk.Frame(card_sub, bg=COLOR_CARD, padx=20, pady=20)
         card_sub_pad.pack(fill="both", expand=True)
         
-        tk.Label(card_sub_pad, text="💻 주관식 코딩 학습", font=("Malgun Gothic", 13, "bold"), fg=COLOR_DARK, bg=COLOR_CARD).pack(anchor="w", pady=(0, 10))
-        tk.Label(card_sub_pad, text="직접 코드를 작성하고 실시간으로\n로컬 샌드박스에서 실행해 보며 작동 유무와 피드백을 받습니다.", 
-                 font=("Malgun Gothic", 10), fg=COLOR_TEXT_MUTED, bg=COLOR_CARD, justify="left").pack(anchor="w", pady=(0, 20))
+        tk.Label(card_sub_pad, text="💻 주관식 코딩 학습", font=("Malgun Gothic", 13, "bold"), fg=COLOR_DARK, bg=COLOR_CARD).pack(anchor="w", pady=(0, 15))
+        tk.Label(card_sub_pad, text="직접 코드를 작성하고\n실시간으로 실행해 보며\n피드백을 받습니다.", 
+                 font=("Malgun Gothic", 10), fg=COLOR_TEXT_MUTED, bg=COLOR_CARD, justify="left").pack(anchor="w", pady=(0, 25), expand=True)
         create_flat_button(card_sub_pad, "주관식 시작 ➔", "#319795", "#ffffff", "#2c7a7b", 
-                           lambda: self.start_learning_session("subjective")).pack(fill="x")
+                           lambda: self.start_learning_session("subjective")).pack(fill="x", ipady=6)
         
         btn_back = create_flat_button(body, "⬅ 메인 메뉴로", COLOR_DARK, "#ffffff", "#4a5568", self.show_main_menu)
         scope_row = tk.Frame(body, bg=COLOR_BG)
@@ -1547,6 +1859,7 @@ class PythonTutorApp(tk.Tk):
             messagebox.showwarning("개념서 없음", "학습 문제를 만들 개념서가 없습니다. 먼저 개념서를 추가하세요.")
             self.show_concept_manager()
             return
+        self.toggle_sidebar(False)  # 사이드바 닫기
         self.current_mode = "learning"
         self.current_q_index = 0
         self.session_results = []
@@ -1808,16 +2121,87 @@ class PythonTutorApp(tk.Tk):
         self.session_results = []
         self.test_temp_answers = {}
         self.test_answer_widgets = {}
+        self.test_remaining_time = 30 * 60  # 30분 = 1800초
         self.generate_ai_quizzes_async(mode="test")
 
+    def update_test_timer(self):
+        """시험 타이머 업데이트"""
+        if self.test_remaining_time <= 0:
+            # 시간 종료
+            if self.test_timer_id:
+                self.after_cancel(self.test_timer_id)
+            messagebox.showwarning("시간 종료", "시험 시간이 종료되었습니다. 자동으로 제출됩니다.")
+            self.submit_test_paper()
+            return
+        
+        # 타이머 라벨 업데이트
+        if hasattr(self, '_timer_label') and self._timer_label.winfo_exists():
+            minutes = self.test_remaining_time // 60
+            seconds = self.test_remaining_time % 60
+            time_text = f"{minutes}:{seconds:02d}"
+            
+            # 시간이 적으면 색상 변경
+            if self.test_remaining_time <= 300:  # 5분 이하
+                color = COLOR_ERROR
+            elif self.test_remaining_time <= 600:  # 10분 이하
+                color = "#f59e0b"
+            else:
+                color = COLOR_SUCCESS
+            
+            self._timer_label.config(text=time_text, fg=color)
+        
+        self.test_remaining_time -= 1
+        self.test_timer_id = self.after(1000, self.update_test_timer)
+    
+    def scroll_to_question(self, scroll_frame, question_index):
+        """시험지에서 특정 문제로 스크롤"""
+        # TODO: 이 기능은 추후 구현 (Canvas에서 yview_moveto 사용)
+        pass
+
+
     def show_test_paper(self):
-        """시험 모드: 스크롤 형태로 10문제 배치"""
+        """시험 모드: 스크롤 형태로 10문제 배치 + 타이머"""
         self.init_container()
+        self.navigation_bar.update_info(f"시험모드 - {len(self.current_session_quizzes)}문제")
         
         # 헤더
-        header = tk.Frame(self.main_container, bg=COLOR_DARK)
-        header.pack(fill="x")
-        tk.Label(header, text="📝 시험 모드 (총 10문항 혼합)", font=("Malgun Gothic", 16, "bold"), fg="#ffffff", bg=COLOR_DARK).pack()
+        header = tk.Frame(self.main_container, bg="#f9fafb")
+        header.pack(fill="x", padx=0, pady=0)
+        
+        header_content = tk.Frame(header, bg="#f9fafb", padx=30, pady=15)
+        header_content.pack(fill="x")
+        
+        # 좌측: 타이틀
+        left_title = tk.Frame(header_content, bg="#f9fafb")
+        left_title.pack(side="left", fill="x", expand=True)
+        
+        tk.Label(left_title, text="📝 시험 모드", font=("Malgun Gothic", 18, "bold"), 
+                fg=COLOR_DARK, bg="#f9fafb").pack(anchor="w")
+        tk.Label(left_title, text=f"총 {len(self.current_session_quizzes)}문항 (객관식 5 + 주관식 5)", 
+                font=("Malgun Gothic", 10), fg=COLOR_TEXT_MUTED, bg="#f9fafb").pack(anchor="w", pady=(2, 0))
+        
+        # 우측: 타이머
+        timer_frame = tk.Frame(header_content, bg="#f9fafb")
+        timer_frame.pack(side="right", fill="y")
+        
+        timer_label_text = tk.Label(timer_frame, text="⏱ 남은 시간:", font=("Malgun Gothic", 11), 
+                                    fg=COLOR_DARK, bg="#f9fafb")
+        timer_label_text.pack(side="left", padx=(0, 8))
+        
+        minutes = self.test_remaining_time // 60
+        seconds = self.test_remaining_time % 60
+        self._timer_label = tk.Label(timer_frame, text=f"{minutes}:{seconds:02d}", 
+                                     font=("Malgun Gothic", 14, "bold"), fg=COLOR_SUCCESS, bg="#f9fafb")
+        self._timer_label.pack(side="left")
+        
+        # 타이머 시작
+        if self.test_timer_id:
+            self.after_cancel(self.test_timer_id)
+        self.test_timer_id = self.after(1000, self.update_test_timer)
+        
+        # 구분선
+        sep = tk.Frame(header, bg=COLOR_BORDER, height=1)
+        sep.pack(fill="x")
         
         # 스크롤 가능한 본문 영역 생성
         scroll_container = ScrollableFrame(self.main_container)
@@ -1826,8 +2210,8 @@ class PythonTutorApp(tk.Tk):
         sf = scroll_container.scrollable_frame
         
         # 상단 안내 문구
-        lbl_info = tk.Label(sf, text="각 문제를 풀고 우측 하단의 [임시 저장] 버튼을 누를 수 있습니다. 저장하지 않은 답안도 [최종 제출] 시 자동 저장 후 채점됩니다.",
-                            font=("Malgun Gothic", 10, "bold"), fg=COLOR_PRIMARY, bg=COLOR_BG, justify="left", pady=10)
+        lbl_info = tk.Label(sf, text="각 문제를 풀고 [임시 저장]을 누를 수 있습니다. 하단의 [최종 제출]로 답안을 제출하세요.",
+                            font=("Malgun Gothic", 10), fg=COLOR_PRIMARY, bg=COLOR_BG, justify="center", pady=10)
         lbl_info.pack(fill="x", padx=30, pady=(15, 5))
         
         # 문제 카드들 렌더링
@@ -1837,8 +2221,12 @@ class PythonTutorApp(tk.Tk):
             q_type = q_data.get("type")
             
             # 카드 박스
-            card = tk.Frame(sf, bg=COLOR_CARD, bd=1, relief="solid", highlightthickness=0, highlightbackground=COLOR_BORDER)
+            card = tk.Frame(sf, bg=COLOR_CARD)
             card.pack(fill="x", padx=30, pady=10)
+            
+            # 카드 상단 분류 표시
+            type_bar = tk.Frame(card, bg=COLOR_PRIMARY if q_type == "objective" else "#8b5cf6", height=3)
+            type_bar.pack(fill="x")
             
             pad_frame = tk.Frame(card, bg=COLOR_CARD, padx=20, pady=15)
             pad_frame.pack(fill="x")
@@ -2329,10 +2717,22 @@ class PythonTutorApp(tk.Tk):
     def show_library(self):
         """기록실: 저장된 파일 목록 리스트 및 요약 정보 제공"""
         self.init_container()
+        self.navigation_bar.update_info("기록실 - 풀이 기록 보관")
         
-        header = tk.Frame(self.main_container, bg=COLOR_DARK)
-        header.pack(fill="x")
-        tk.Label(header, text="🗂️ 기록실 - 풀이 기록 보관소", font=("Malgun Gothic", 16, "bold"), fg="#ffffff", bg=COLOR_DARK).pack()
+        header = tk.Frame(self.main_container, bg="#f9fafb")
+        header.pack(fill="x", padx=0, pady=0)
+        
+        header_content = tk.Frame(header, bg="#f9fafb", padx=30, pady=20)
+        header_content.pack(fill="x")
+        
+        tk.Label(header_content, text="🗂️ 기록실", font=("Malgun Gothic", 18, "bold"), 
+                fg=COLOR_DARK, bg="#f9fafb").pack(anchor="w")
+        tk.Label(header_content, text="이전에 풀었던 모든 세션의 기록을 확인합니다", font=("Malgun Gothic", 11), 
+                fg=COLOR_TEXT_MUTED, bg="#f9fafb").pack(anchor="w", pady=(3, 0))
+        
+        # 구분선
+        sep = tk.Frame(header, bg=COLOR_BORDER, height=1)
+        sep.pack(fill="x")
         
         # 바디 구성 (좌측: 파일 리스트, 우측: 선택 기록 상세 요약 및 제어 버튼)
         body = tk.Frame(self.main_container, bg=COLOR_BG)
@@ -2342,20 +2742,21 @@ class PythonTutorApp(tk.Tk):
         left_frame = tk.Frame(body, bg=COLOR_BG)
         left_frame.pack(side="left", fill="both", expand=True, padx=(0, 15))
         
-        tk.Label(left_frame, text="풀이 기록 목록 (최신순)", font=("Malgun Gothic", 11, "bold"), fg=COLOR_DARK, bg=COLOR_BG).pack(anchor="w", pady=(0, 5))
+        tk.Label(left_frame, text="풀이 기록 목록 (최신순)", font=("Malgun Gothic", 11, "bold"), fg=COLOR_DARK, bg=COLOR_BG).pack(anchor="w", pady=(0, 8))
         
-        listbox_frame = tk.Frame(left_frame, bg=COLOR_CARD, bd=1, relief="solid")
+        listbox_frame = tk.Frame(left_frame, bg=COLOR_CARD)
         listbox_frame.pack(fill="both", expand=True)
         
         scrollbar = ttk.Scrollbar(listbox_frame)
         scrollbar.pack(side="right", fill="y")
         
-        listbox = tk.Listbox(listbox_frame, font=("Malgun Gothic", 10), yscrollcommand=scrollbar.set, relief="flat")
+        listbox = tk.Listbox(listbox_frame, font=("Malgun Gothic", 10), yscrollcommand=scrollbar.set, 
+                            relief="flat", bg=COLOR_BUTTON_BG, fg=COLOR_DARK, highlightthickness=0)
         listbox.pack(side="left", fill="both", expand=True)
         scrollbar.config(command=listbox.yview)
         
         # 우측 상세 정보 프레임
-        right_frame = tk.Frame(body, width=350, bg=COLOR_CARD, bd=1, relief="solid", highlightthickness=0, highlightbackground=COLOR_BORDER)
+        right_frame = tk.Frame(body, width=350, bg=COLOR_CARD, highlightthickness=0)
         right_frame.pack(side="right", fill="both", padx=(15, 0))
         right_frame.pack_propagate(False)
         
@@ -2363,25 +2764,25 @@ class PythonTutorApp(tk.Tk):
         right_pad = tk.Frame(right_frame, bg=COLOR_CARD, padx=20, pady=20)
         right_pad.pack(fill="both", expand=True)
         
-        tk.Label(right_pad, text="🔎 기록 상세 요약", font=("Malgun Gothic", 13, "bold"), fg=COLOR_DARK, bg=COLOR_CARD).pack(anchor="w", pady=(0, 15))
+        tk.Label(right_pad, text="📊 기록 상세", font=("Malgun Gothic", 12, "bold"), fg=COLOR_DARK, bg=COLOR_CARD).pack(anchor="w", pady=(0, 12))
         
         # 메타데이터 표기 위젯들
-        lbl_m_mode = tk.Label(right_pad, text="학습 모드: -", font=("Malgun Gothic", 10), fg=COLOR_DARK, bg=COLOR_CARD)
+        lbl_m_mode = tk.Label(right_pad, text="학습 모드: -", font=("Malgun Gothic", 10), fg=COLOR_TEXT_MUTED, bg=COLOR_CARD)
         lbl_m_mode.pack(anchor="w", pady=4)
         
-        lbl_m_date = tk.Label(right_pad, text="일시: -", font=("Malgun Gothic", 10), fg=COLOR_DARK, bg=COLOR_CARD)
+        lbl_m_date = tk.Label(right_pad, text="일시: -", font=("Malgun Gothic", 10), fg=COLOR_TEXT_MUTED, bg=COLOR_CARD)
         lbl_m_date.pack(anchor="w", pady=4)
         
-        lbl_m_score = tk.Label(right_pad, text="성적: -", font=("Malgun Gothic", 10), fg=COLOR_DARK, bg=COLOR_CARD)
+        lbl_m_score = tk.Label(right_pad, text="성적: -", font=("Malgun Gothic", 10), fg=COLOR_TEXT_MUTED, bg=COLOR_CARD)
         lbl_m_score.pack(anchor="w", pady=4)
         
         # 제어용 컨트롤 패널
         ctrl_frame = tk.Frame(right_pad, bg=COLOR_CARD)
         ctrl_frame.pack(fill="x", side="bottom", pady=10)
         
-        btn_view = create_flat_button(ctrl_frame, "👁️ 기록 상세보기", COLOR_PRIMARY, "#ffffff", COLOR_PRIMARY_HOVER, 
+        btn_view = create_flat_button(ctrl_frame, "👁️ 상세보기", COLOR_PRIMARY, "#ffffff", COLOR_PRIMARY_HOVER, 
                                      None, font=("Malgun Gothic", 10, "bold"))
-        btn_view.pack(fill="x", pady=5)
+        btn_view.pack(fill="x", pady=3)
         btn_view.config(state="disabled")
         
         btn_resolve = create_flat_button(ctrl_frame, "🔄 이 문제 세트 다시 풀기", COLOR_SUCCESS, "#ffffff", "#38a169", 
