@@ -8,6 +8,9 @@
 #기대효과
 원하는 부분의 범위의 내용을 암기, 즉시 개념 문제를 풀며 지식을 새기고 좀 더 난이도 있는 객관식을 풀어 응용의 토대를 만든뒤 주관식과 시험문제로 기초를 완성한다.
 
+<img width="2555" height="1350" alt="스크린샷 2026-06-15 212118" src="https://github.com/user-attachments/assets/cd2640e6-6201-4995-b653-89293a7b9615" />
+<img width="2526" height="1354" alt="스크린샷 2026-06-15 212523" src="https://github.com/user-attachments/assets/e39e0706-b62e-49f2-9298-53fcad670ea8" />
+<img width="2535" height="1359" alt="스크린샷 2026-06-15 213059" src="https://github.com/user-attachments/assets/f8632b3e-0e6c-467b-afeb-847958a8c8ec" />
 
 
 #기능
